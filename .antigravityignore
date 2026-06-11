@@ -1,0 +1,10 @@
+build/
+docs/
+gradle/
+out/
+test/
+.git/
+.kotlin/
+.gradle/
+.antigravityignore
+.gitignore

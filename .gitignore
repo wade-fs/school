@@ -1,0 +1,57 @@
+# Gradle files
+.gradle/
+build/
+
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+.navigation/
+captures/
+externalNativeBuild/
+.cxx/
+local.properties
+
+# Android App artifacts
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# Kotlin
+/bin
+/gen
+*.kt.kt
+
+# Secrets and keys
+*.jks
+*.keystore
+*.p12
+google-services.json
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Mobile Tools
+.attach_pid*
+.google_apis/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/assetWizardSettings.xml
+.idea/navEditor.xml
+.idea/vcs.xml
+.idea/codeStyles/
+.idea/dictionaries/
+.idea/inspectionProfiles/
+
+# Gradle Wrapper binary
+# Note: It's often recommended to commit gradle-wrapper.jar, 
+# but if you prefer a lean repo, you can ignore it.
+# gradle/wrapper/gradle-wrapper.jar
