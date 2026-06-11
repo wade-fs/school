@@ -19,19 +19,35 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
 
+import androidx.compose.foundation.clickable
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(role: String, onBack: () -> Unit, onNavigateToStudent: (String, String) -> Unit = { _, _ -> }) {
+    val viewModel: CounselorViewModel = viewModel()
+    val schoolConfig by viewModel.schoolConfig.collectAsState()
     val roleTitle = roles.find { it.id == role }?.title ?: "未知角色"
     var selectedTabIndex by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var showSettingsDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    if (showSettingsDialog) {
+        SchoolSettingsDialog(
+            config = schoolConfig,
+            onDismiss = { showSettingsDialog = false },
+            onSave = { name, type ->
+                viewModel.updateSchoolConfig(name, type)
+                showSettingsDialog = false
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { 
                     Column {
-                        Text(text = "$roleTitle 工作台", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text(text = "2026年6月11日 星期四", style = MaterialTheme.typography.labelSmall)
+                        Text(text = schoolConfig.schoolName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(text = "${com.wade.teacher.util.AcademicUtils.getAcademicString()} ($roleTitle)", style = MaterialTheme.typography.labelSmall)
                     }
                 },
                 navigationIcon = {
@@ -40,8 +56,8 @@ fun DashboardScreen(role: String, onBack: () -> Unit, onNavigateToStudent: (Stri
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO */ }) {
-                        Icon(Icons.Default.Notifications, contentDescription = "通知")
+                    IconButton(onClick = { showSettingsDialog = true }) {
+                        Icon(Icons.Default.Settings, contentDescription = "學校設定")
                     }
                     IconButton(onClick = { /* TODO */ }) {
                         Icon(Icons.Default.Person, contentDescription = "個人資料")
@@ -100,6 +116,57 @@ fun DashboardScreen(role: String, onBack: () -> Unit, onNavigateToStudent: (Stri
     }
 }
 
+@Composable
+fun SchoolSettingsDialog(
+    config: com.wade.teacher.data.local.entity.SchoolConfig,
+    onDismiss: () -> Unit,
+    onSave: (String, com.wade.teacher.data.local.entity.SchoolType) -> Unit
+) {
+    var name by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(config.schoolName) }
+    var selectedType by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(config.schoolType) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("全校性設定") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("校名") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Text("學校類型", style = MaterialTheme.typography.labelLarge)
+                com.wade.teacher.data.local.entity.SchoolType.values().forEach { type ->
+                    val label = when (type) {
+                        com.wade.teacher.data.local.entity.SchoolType.JUNIOR_HIGH -> "國中 (7-9年級)"
+                        com.wade.teacher.data.local.entity.SchoolType.SENIOR_HIGH -> "高中 (10-12年級)"
+                        com.wade.teacher.data.local.entity.SchoolType.COMPREHENSIVE -> "綜合高中 (7-12年級)"
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().clickable { selectedType = type }
+                    ) {
+                        RadioButton(selected = selectedType == type, onClick = { selectedType = type })
+                        Text(label)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(name, selectedType) }) {
+                Text("儲存")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CounselingDashboard(
@@ -123,8 +190,13 @@ fun CounselingDashboard(
             if (isImporting) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
             } else {
-                IconButton(onClick = { filePickerLauncher.launch("text/csv") }) {
-                    Icon(Icons.Default.Add, contentDescription = "匯入學生 CSV", tint = MaterialTheme.colorScheme.primary)
+                Row {
+                    IconButton(onClick = { filePickerLauncher.launch("text/csv") }) {
+                        Icon(Icons.Default.Add, contentDescription = "匯入學生 CSV", tint = MaterialTheme.colorScheme.primary)
+                    }
+                    IconButton(onClick = { viewModel.clearAllStudents() }) {
+                        Icon(Icons.Default.Delete, contentDescription = "清空所有資料", tint = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
         }
@@ -156,45 +228,76 @@ fun CounselingDashboard(
         Spacer(modifier = Modifier.height(16.dp))
         
         Text("即將到來的預約", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-            onClick = { onNavigateToStudent("112001", "陳小明") }
-        ) {
-            ListItem(
-                headlineContent = { Text("陳小明 (112001)", fontWeight = FontWeight.Bold) },
-                supportingContent = { Text("今日 14:30 - 第三次晤談 (人際關係)") },
-                trailingContent = { Text("15分鐘後", color = MaterialTheme.colorScheme.error) },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
+        
+        val upcomingAppointments = students.filter { it.nextAppointment != null }.sortedBy { it.nextAppointment }
+        if (upcomingAppointments.isNotEmpty()) {
+            upcomingAppointments.take(1).forEach { student ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                    onClick = { onNavigateToStudent(student.studentId, student.name) }
+                ) {
+                    ListItem(
+                        headlineContent = { Text("${student.name} (${student.studentId})", fontWeight = FontWeight.Bold) },
+                        supportingContent = { Text("預約時間: 2026-06-12 14:30") }, // Simplified date display
+                        trailingContent = { Text("明日", color = MaterialTheme.colorScheme.error) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+            }
+        } else {
+            Text("目前無預約", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
         }
         
+        // Admin Actions
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = { viewModel.promoteAllStudents() },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+            ) {
+                Icon(Icons.Default.TrendingUp, contentDescription = null)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("全體升級", fontSize = 12.sp)
+            }
+            OutlinedButton(
+                onClick = { 
+                    if (students.isNotEmpty()) {
+                        // Demo: Mark first student as High Risk and Key Tracking
+                        val s = students.first()
+                        viewModel.setStudentStatus(s.studentId, "Active", "法院審理中", "High")
+                        viewModel.toggleKeyTracking(s.studentId)
+                        viewModel.scheduleAppointment(s.studentId, System.currentTimeMillis() + 86400000)
+                    }
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.Edit, contentDescription = null)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("示範標記", fontSize = 12.sp)
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
         
         Text("重點追蹤個案", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         
-        if (students.isNotEmpty()) {
-            students.forEach { student ->
+        val keyStudents = students.filter { it.isKeyTracking || it.priority == "High" }
+        if (keyStudents.isNotEmpty()) {
+            keyStudents.forEach { student ->
+                val semesterText = if (student.currentSemester == 1) "上" else "下"
                 DashboardActionCard(
-                    title = "${student.name} (${student.currentClass}班)",
-                    description = "目前狀態：${student.status} ${student.legalStatus?.let {"($it)"} ?: ""}",
-                    actionText = "查看歷程",
+                    title = "${student.name} (${student.currentGrade}年$semesterText ${student.currentClass}班)",
+                    description = "狀態：${student.status} ${student.legalStatus?.let {"($it)"} ?: ""} [${student.priority}]",
+                    actionText = "查看",
                     onClick = { onNavigateToStudent(student.studentId, student.name) }
                 )
             }
         } else {
-            DashboardActionCard(
-                title = "林大華 (102班)", 
-                description = "目前狀態：法院審理中 (已轉介律師)", 
-                actionText = "查看歷程",
-                onClick = { onNavigateToStudent("112002", "林大華") }
-            )
-            DashboardActionCard(
-                title = "張美美 (305班)", 
-                description = "目前狀態：休學中 (定期電訪追蹤)", 
-                actionText = "更新記錄",
-                onClick = { onNavigateToStudent("112003", "張美美") }
-            )
+            Text("暫無重點追蹤對象", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
         }
     }
 }

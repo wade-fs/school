@@ -23,13 +23,16 @@ object CsvParser {
                         gender = tokens[2].trim(),
                         entryYear = tokens[3].trim().toInt(),
                         currentGrade = tokens[4].trim().toInt(),
-                        currentClass = tokens[5].trim(),
-                        seatNo = tokens[6].trim().toInt(),
-                        status = tokens.getOrNull(7)?.trim()?.takeIf { it.isNotEmpty() } ?: "Active",
-                        statusNote = tokens.getOrNull(8)?.trim(),
-                        legalStatus = tokens.getOrNull(9)?.trim(),
-                        guardianName = tokens.getOrNull(10)?.trim(),
-                        guardianPhone = tokens.getOrNull(11)?.trim()
+                        currentSemester = tokens[5].trim().toInt(),
+                        currentClass = tokens[6].trim(),
+                        seatNo = tokens[7].trim().toInt(),
+                        phone = tokens.getOrNull(8)?.trim(),
+                        email = tokens.getOrNull(9)?.trim(),
+                        status = tokens.getOrNull(10)?.trim()?.takeIf { it.isNotEmpty() } ?: "Active",
+                        statusNote = tokens.getOrNull(11)?.trim(),
+                        legalStatus = tokens.getOrNull(12)?.trim(),
+                        guardianName = tokens.getOrNull(13)?.trim(),
+                        guardianPhone = tokens.getOrNull(14)?.trim()
                     )
                     students.add(student)
                 } catch (e: Exception) {
