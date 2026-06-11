@@ -2,13 +2,14 @@ package com.wade.teacher.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "case_tags")
 data class CaseTag(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val name: String,       // 例如 "家庭問題"
-    val color: String       // 顯示顏色，例如 "#FF6B6B"
+    val name: String,
+    val color: String
 )
 
 @Entity(
@@ -27,6 +28,10 @@ data class CaseTag(
             childColumns = ["tagId"],
             onDelete = ForeignKey.CASCADE
         )
+    ],
+    indices = [
+        Index(value = ["caseLogId"]),
+        Index(value = ["tagId"])
     ]
 )
 data class CaseLogTag(

@@ -51,6 +51,7 @@ interface CounselorDao {
     suspend fun insertLogTag(link: CaseLogTag)
 
     @Transaction
+    @RewriteQueriesToDropUnusedColumns
     @Query("SELECT * FROM case_tags JOIN case_log_tags ON case_tags.id = case_log_tags.tagId WHERE caseLogId = :logId")
     fun getTagsForLog(logId: Int): Flow<List<CaseTag>>
 

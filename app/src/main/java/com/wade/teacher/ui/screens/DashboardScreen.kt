@@ -3,6 +3,8 @@ package com.wade.teacher.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -54,7 +56,7 @@ fun DashboardScreen(role: String, onBack: () -> Unit, onNavigateToStudent: (Stri
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 },
                 actions = {
@@ -277,7 +279,7 @@ fun CounselingDashboard(
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
             ) {
-                Icon(Icons.Default.TrendingUp, contentDescription = null)
+                Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null)
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("全體升級", fontSize = 12.sp)
             }
