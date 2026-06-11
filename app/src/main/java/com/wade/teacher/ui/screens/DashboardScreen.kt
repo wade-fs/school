@@ -2,24 +2,31 @@ package com.wade.teacher.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(role: String, onBack: () -> Unit) {
     val roleTitle = roles.find { it.id == role }?.title ?: "未知角色"
+    var selectedTabIndex by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "$roleTitle 工作台", fontWeight = FontWeight.Bold) },
+                title = { 
+                    Column {
+                        Text(text = "$roleTitle 工作台", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(text = "2026年6月11日 星期四", style = MaterialTheme.typography.labelSmall)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "返回")
@@ -40,6 +47,30 @@ fun DashboardScreen(role: String, onBack: () -> Unit) {
                     actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
+        },
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                    label = { Text("首頁") },
+                    selected = selectedTabIndex == 0,
+                    onClick = { selectedTabIndex = 0 }
+                )
+                if (role != "student" && role != "parent") {
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.DateRange, contentDescription = null) },
+                        label = { Text("科任班級") },
+                        selected = selectedTabIndex == 1,
+                        onClick = { selectedTabIndex = 1 }
+                    )
+                }
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Email, contentDescription = null) },
+                    label = { Text("互動") },
+                    selected = selectedTabIndex == 2,
+                    onClick = { selectedTabIndex = 2 }
+                )
+            }
         }
     ) { paddingValues ->
         Box(
@@ -47,70 +78,54 @@ fun DashboardScreen(role: String, onBack: () -> Unit) {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when (role) {
-                "homeroom" -> HomeroomDashboard()
-                "subject" -> SubjectDashboard()
-                "admin" -> AdminDashboard()
-                "counseling" -> CounselingDashboard()
-                "dept_head" -> DeptHeadDashboard()
-                else -> Text("正在開發中...", modifier = Modifier.padding(16.dp))
+            when (selectedTabIndex) {
+                0 -> RoleFeatureContent(role = role)
+                1 -> SubjectClassSwitcher()
+                2 -> InteractionHub()
             }
         }
     }
 }
 
 @Composable
-fun HomeroomDashboard() {
+fun SubjectClassSwitcher() {
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("今日重點", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("科任班級管理", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
-        DashboardActionCard("快速點名", "班級出缺席即時紀錄", "30秒完成")
-        DashboardActionCard("家長聯絡簿", "有 3 條未讀訊息", "前往回覆")
-        DashboardActionCard("週記批閱", "目前剩餘 15 本待處理", "開始批閱")
+        ClassCard("101 班", "物理 (一)", "待批改作業: 2")
+        ClassCard("102 班", "物理 (一)", "今日有課 (14:10)")
+        ClassCard("205 班", "進階物理", "已完成進度: 75%")
     }
 }
 
 @Composable
-fun SubjectDashboard() {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text("課程與評量", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(12.dp))
-        DashboardActionCard("教材準備", "高一數學：多項式 (108課綱)", "查看模板")
-        DashboardActionCard("AI 輔助批改", "已收集 40 份作業", "啟動分析")
-        DashboardActionCard("學生成績分佈", "查看最近一次小考趨勢", "查看報表")
+fun ClassCard(className: String, subject: String, status: String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Icon(Icons.Default.Face, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(text = className, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(text = subject, style = MaterialTheme.typography.bodySmall)
+                Text(text = status, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            }
+        }
     }
 }
 
 @Composable
-fun AdminDashboard() {
+fun InteractionHub() {
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("校務行政", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("親師生互動樞紐", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
-        DashboardActionCard("公文簽核", "有 2 件急件待處理", "立即處理")
-        DashboardActionCard("場地借用", "體育館/視聽教室預約狀態", "管理預約")
-        DashboardActionCard("校務行事曆", "下週：期中考週準備會議", "查看詳情")
-    }
-}
-
-@Composable
-fun CounselingDashboard() {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text("學生輔導 (加密環境)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-        Spacer(modifier = Modifier.height(12.dp))
-        DashboardActionCard("個案紀錄", "安全儲存與權限控管", "查看清單")
-        DashboardActionCard("心情溫度計", "全班情緒預警分析", "查看警示")
-        DashboardActionCard("晤談預約", "今日下午有 2 場預約", "管理時段")
-    }
-}
-
-@Composable
-fun DeptHeadDashboard() {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text("科務管理", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(12.dp))
-        DashboardActionCard("108課綱檢核", "選修課程學分結構檢索", "開始檢核")
-        DashboardActionCard("跨科共備", "物理/化學聯合備課社群", "進入空間")
-        DashboardActionCard("教學觀察", "本學期進度追蹤", "查看日誌")
+        DashboardActionCard("家長線上簽閱", "聯絡簿數位化簽收系統", "進入系統")
+        DashboardActionCard("學生提問箱", "來自 101 班的 3 個物理疑問", "查看問題")
+        DashboardActionCard("心情溫度計", "今日有 2 位學生回報低落", "關懷訪談")
     }
 }
 

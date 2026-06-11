@@ -28,7 +28,9 @@ val roles = listOf(
     TeacherRole("subject", "科任教師", "教材管理、作業評量", Icons.Default.Edit),
     TeacherRole("admin", "行政教師", "公文流程、校務行事曆", Icons.Default.Settings),
     TeacherRole("counseling", "輔導教師", "個案管理、心理健康", Icons.Default.Favorite),
-    TeacherRole("dept_head", "科主任", "課程規劃、教師督導", Icons.Default.Face)
+    TeacherRole("dept_head", "科主任", "課程規劃、教師督導", Icons.Default.Face),
+    TeacherRole("student", "學生", "繳交作業、課表查詢", Icons.Default.Person),
+    TeacherRole("parent", "家長", "聯絡簿簽閱、請假申請", Icons.Default.AccountCircle)
 )
 
 @Composable

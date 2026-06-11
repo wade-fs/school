@@ -42,18 +42,33 @@ The app will feature a "Role Selector" or a profile-based dashboard. Once a role
   - Secondary: #43A047 (Green) - Growth and Education
   - Surface/Background: Modern light grey/white
 
-## 5. Development Roadmap
-1. **Phase 1: Project Scaffolding (Current)**
-   - Basic Gradle setup
-   - Theme and Foundation (Colors, Shapes, Typography)
-2. **Phase 2: Role-Based Shell**
-   - Main Entry Activity
-   - Role-switching mechanism
-   - Generic Dashboard layouts
-3. **Phase 3: Feature Prototypes**
-   - Interactive Attendance UI
-   - Lesson Plan Template Viewer
-   - Secure Case Log mock-up
-4. **Phase 4: Refinement**
-   - Animations and Transitions
-   - Data mocking for demonstration
+## 6. Advanced Design Principles (Refined)
+
+### 6.1 Role Overlap & Multi-Class Management
+Taiwanese high school teachers often juggle multiple roles simultaneously.
+- **Unified Subject View**: Every teacher (Homeroom, Counseling, Admin) is fundamentally a **Subject Teacher**. The app must provide a "My Classes" switcher to manage different groups.
+- **The Homeroom Anchor**: For Homeroom teachers, their specific class is an "Anchor" but they still access Subject features for other classes they teach.
+- **Counseling Integration**: Counseling records are sensitive but need class-based filtering to help counselors manage their teaching load alongside case work.
+
+### 6.2 Interaction Dynamics
+- **Parent-Teacher (The Digital Contact Book)**: 
+  - Push notifications for announcements.
+  - "Read Receipt" and "Digital Signature" for parents to acknowledge daily logs/grades.
+- **Student-Teacher (Academic & Emotional Support)**:
+  - Secure "Question Box" for academic help.
+  - "Mood Check-in" for emotional pulse-taking.
+  - Digital assignment submission with instant teacher feedback.
+
+## 7. Feature Breakdown (Updated)
+
+### 1. Homeroom + Subject (導師兼科任)
+- **Dashboard**: Switches between "My Class (Homeroom)" and "Subject Classes".
+- **Interaction**: Manage one specific class's attendance and contact book, while managing multiple classes' grades.
+
+### 2. Counseling + Subject (輔導兼科任)
+- **Searchable Case Logs**: Encrypted search by Class ID and Student Name.
+- **Hybrid View**: Toggle between teaching resources and sensitive individual counseling schedules.
+
+### 3. Parent Interaction Hub
+- **Digital Signature**: Parents can "sign" the contact book with a single tap, which updates the teacher's dashboard in real-time.
+- **Broadcast System**: Tag messages as "Urgent" (bypasses notification fatigue logic) or "Regular".
