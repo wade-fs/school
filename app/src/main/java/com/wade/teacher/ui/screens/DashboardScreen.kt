@@ -28,7 +28,7 @@ import android.net.Uri
 fun DashboardScreen(role: String, onBack: () -> Unit, onNavigateToStudent: (String, String) -> Unit = { _, _ -> }) {
     val viewModel: CounselorViewModel = viewModel()
     val schoolConfig by viewModel.schoolConfig.collectAsState()
-    val roleTitle = if (role == "counseling") "輔導教師" else "教師" // Simplified for now since roles reference is failing
+    val roleTitle = roles.find { it.id == role }?.title ?: "未知角色"
     var selectedTabIndex by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
     var showSettingsDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
@@ -106,7 +106,7 @@ fun DashboardScreen(role: String, onBack: () -> Unit, onNavigateToStudent: (Stri
             when (selectedTabIndex) {
                 0 -> {
                     if (role == "counseling") {
-                        CounselingDashboard(onNavigateToStudent)
+                        CounselingDashboard(onNavigateToStudent, viewModel)
                     } else {
                         RoleFeatureContent(role = role)
                     }
@@ -173,10 +173,10 @@ fun SchoolSettingsDialog(
 @Composable
 fun CounselingDashboard(
     onNavigateToStudent: (String, String) -> Unit,
-    viewModel: CounselorViewModel = viewModel()
+    viewModel: CounselorViewModel
 ) {
     val context = LocalContext.current
-    val students by viewModel.students.collectAsState()
+    val studentsWithProfiles by viewModel.studentsWithProfiles.collectAsState()
     val isImporting by viewModel.isImporting.collectAsState()
 
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -186,14 +186,14 @@ fun CounselingDashboard(
     }
 
     var searchQuery by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-    val filteredStudents = if (searchQuery.isBlank()) {
-        students
+    val filteredEntries = if (searchQuery.isBlank()) {
+        studentsWithProfiles
     } else {
-        students.filter { 
-            it.name.contains(searchQuery, ignoreCase = true) || 
-            it.studentId.contains(searchQuery) ||
-            it.status.contains(searchQuery, ignoreCase = true) ||
-            (it.legalStatus?.contains(searchQuery, ignoreCase = true) ?: false)
+        studentsWithProfiles.filter { entry ->
+            entry.student.name.contains(searchQuery, ignoreCase = true) || 
+            entry.student.studentId.contains(searchQuery) ||
+            (entry.profile?.status?.contains(searchQuery, ignoreCase = true) ?: false) ||
+            (entry.profile?.legalStatus?.contains(searchQuery, ignoreCase = true) ?: false)
         }
     }
 
@@ -246,17 +246,18 @@ fun CounselingDashboard(
         
         Text("即將到來的預約", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         
-        val upcomingAppointments = students.filter { it.nextAppointment != null }.sortedBy { it.nextAppointment }
+        val upcomingAppointments = studentsWithProfiles.filter { it.profile?.nextAppointment != null }
+            .sortedBy { it.profile?.nextAppointment }
         if (upcomingAppointments.isNotEmpty()) {
-            upcomingAppointments.take(1).forEach { student ->
+            upcomingAppointments.take(1).forEach { entry ->
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    onClick = { onNavigateToStudent(student.studentId, student.name) }
+                    onClick = { onNavigateToStudent(entry.student.studentId, entry.student.name) }
                 ) {
                     ListItem(
-                        headlineContent = { Text("${student.name} (${student.studentId})", fontWeight = FontWeight.Bold) },
-                        supportingContent = { Text("預約時間: 2026-06-12 14:30") }, // Simplified date display
+                        headlineContent = { Text("${entry.student.name} (${entry.student.studentId})", fontWeight = FontWeight.Bold) },
+                        supportingContent = { Text("預約時間: 2026-06-12 14:30") }, 
                         trailingContent = { Text("明日", color = MaterialTheme.colorScheme.error) },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
@@ -282,12 +283,11 @@ fun CounselingDashboard(
             }
             OutlinedButton(
                 onClick = { 
-                    if (students.isNotEmpty()) {
-                        // Demo: Mark first student as High Risk and Key Tracking
-                        val s = students.first()
-                        viewModel.setStudentStatus(s.studentId, "Active", "法院審理中", "High")
-                        viewModel.toggleKeyTracking(s.studentId)
-                        viewModel.scheduleAppointment(s.studentId, System.currentTimeMillis() + 86400000)
+                    if (studentsWithProfiles.isNotEmpty()) {
+                        val entry = studentsWithProfiles.first()
+                        viewModel.setStudentStatus(entry.student.studentId, "Active", "法院審理中", "High")
+                        viewModel.toggleKeyTracking(entry.student.studentId)
+                        viewModel.scheduleAppointment(entry.student.studentId, System.currentTimeMillis() + 86400000)
                     }
                 },
                 modifier = Modifier.weight(1f)
@@ -300,21 +300,21 @@ fun CounselingDashboard(
 
         Spacer(modifier = Modifier.height(16.dp))
         
-        Text("重點追蹤個案", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val listTitle = if (searchQuery.isEmpty()) "重點追蹤與全體學生" else "搜尋結果 (${filteredEntries.size})"
+        Text(listTitle, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         
-        val keyStudents = students.filter { it.isKeyTracking || it.priority == "High" }
-        if (keyStudents.isNotEmpty()) {
-            keyStudents.forEach { student ->
-                val semesterText = if (student.currentSemester == 1) "上" else "下"
+        if (filteredEntries.isNotEmpty()) {
+            filteredEntries.forEach { entry ->
+                val semesterText = if (entry.student.currentSemester == 1) "上" else "下"
                 DashboardActionCard(
-                    title = "${student.name} (${student.currentGrade}年$semesterText ${student.currentClass}班)",
-                    description = "狀態：${student.status} ${student.legalStatus?.let {"($it)"} ?: ""} [${student.priority}]",
+                    title = "${entry.student.name} (${entry.student.currentGrade}年$semesterText ${entry.student.currentClass}班)",
+                    description = "學號：${entry.student.studentId} | 狀態：${entry.profile?.status ?: "Active"} ${entry.profile?.legalStatus?.let {"($it)"} ?: ""}",
                     actionText = "查看",
-                    onClick = { onNavigateToStudent(student.studentId, student.name) }
+                    onClick = { onNavigateToStudent(entry.student.studentId, entry.student.name) }
                 )
             }
         } else {
-            Text("暫無重點追蹤對象", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
+            Text(if (studentsWithProfiles.isEmpty()) "尚未匯入學生資料" else "找不到符合的學生", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
         }
     }
 }

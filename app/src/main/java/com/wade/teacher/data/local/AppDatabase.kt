@@ -3,10 +3,25 @@ package com.wade.teacher.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.wade.teacher.data.local.dao.CounselorDao
-import com.wade.teacher.data.local.entity.Student
-import com.wade.teacher.data.local.entity.CaseLog
+import com.wade.teacher.data.local.entity.*
 
-@Database(entities = [Student::class, CaseLog::class], version = 1, exportSchema = false)
+@Database(
+    entities = [
+        Student::class,
+        CounselingProfile::class,
+        CaseLog::class,
+        CaseTag::class,
+        CaseLogTag::class,
+        Appointment::class,
+        CrisisEvent::class,
+        MoodCheckSession::class,
+        MoodCheckResponse::class,
+        ExternalResource::class,
+        AuditLog::class
+    ],
+    version = 2,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun counselorDao(): CounselorDao
 
@@ -20,7 +35,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "teacher_database"
-                ).build()
+                ).fallbackToDestructiveMigration().build()
                 INSTANCE = instance
                 instance
             }

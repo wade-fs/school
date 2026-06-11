@@ -11,7 +11,7 @@ data class CaseLog(
     val academicYear: Int,
     val semester: Int,
     val classAtTime: String,
-    val content: String,
-    val audioPath: String? = null, // 本地音檔路徑
-    val tags: String? = null // 如: "家庭問題, 學習適應"
+    val contentEncrypted: ByteArray,   // AES-256-GCM 加密後的位元組
+    val contentIv: ByteArray,          // 每筆記錄獨立的 IV
+    val audioPath: String? = null      // 本地音檔路徑
 )
