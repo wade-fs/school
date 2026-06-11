@@ -2,7 +2,6 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.0"
-    id("org.jetbrains.kotlin.kapt")
 }
 
 android {
@@ -71,7 +70,7 @@ dependencies {
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
-    ksp("androidx.room:room-compiler:$roomVersion")
+    annotationProcessor("androidx.room:room-compiler:$roomVersion")
     // For Kotlin Symbol Processing (KSP) - required for modern Room
     // id("com.google.devtools.ksp") version "2.0.0-1.0.21" // This needs to be in plugins
     
