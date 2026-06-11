@@ -13,6 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.wade.teacher.ui.screens.RoleSelectorScreen
 import com.wade.teacher.ui.screens.DashboardScreen
+import com.wade.teacher.ui.screens.StudentDetailScreen
 import com.wade.teacher.ui.theme.TaiwanTeacherAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -42,9 +43,22 @@ fun TeacherAppNavigation() {
         }
         composable("dashboard/{role}") { backStackEntry ->
             val role = backStackEntry.arguments?.getString("role") ?: "guest"
-            DashboardScreen(role = role, onBack = {
-                navController.popBackStack()
-            })
+            DashboardScreen(
+                role = role, 
+                onBack = { navController.popBackStack() },
+                onNavigateToStudent = { id, name -> 
+                    navController.navigate("student_detail/$id/$name")
+                }
+            )
+        }
+        composable("student_detail/{id}/{name}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id") ?: ""
+            val name = backStackEntry.arguments?.getString("name") ?: ""
+            StudentDetailScreen(
+                studentId = id,
+                studentName = name,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -13,10 +14,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(role: String, onBack: () -> Unit) {
+fun DashboardScreen(role: String, onBack: () -> Unit, onNavigateToStudent: (String, String) -> Unit = { _, _ -> }) {
     val roleTitle = roles.find { it.id == role }?.title ?: "未知角色"
     var selectedTabIndex by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
 
@@ -83,7 +88,7 @@ fun DashboardScreen(role: String, onBack: () -> Unit) {
             when (selectedTabIndex) {
                 0 -> {
                     if (role == "counseling") {
-                        CounselingDashboard()
+                        CounselingDashboard(onNavigateToStudent)
                     } else {
                         RoleFeatureContent(role = role)
                     }
@@ -97,13 +102,30 @@ fun DashboardScreen(role: String, onBack: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CounselingDashboard() {
+fun CounselingDashboard(
+    onNavigateToStudent: (String, String) -> Unit,
+    viewModel: CounselorViewModel = viewModel()
+) {
+    val context = LocalContext.current
+    val students by viewModel.students.collectAsState()
+    val isImporting by viewModel.isImporting.collectAsState()
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { viewModel.importCsv(context, it) }
+    }
+
     Column(modifier = Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("輔導個案管理", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = { /* TODO: Import CSV */ }) {
-                Icon(Icons.Default.Send, contentDescription = "匯入學生", tint = MaterialTheme.colorScheme.primary)
+            if (isImporting) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            } else {
+                IconButton(onClick = { filePickerLauncher.launch("text/csv") }) {
+                    Icon(Icons.Default.Send, contentDescription = "匯入學生 CSV", tint = MaterialTheme.colorScheme.primary)
+                }
             }
         }
         
@@ -136,7 +158,8 @@ fun CounselingDashboard() {
         Text("即將到來的預約", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         Card(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            onClick = { onNavigateToStudent("112001", "陳小明") }
         ) {
             ListItem(
                 headlineContent = { Text("陳小明 (112001)", fontWeight = FontWeight.Bold) },
@@ -149,9 +172,30 @@ fun CounselingDashboard() {
         Spacer(modifier = Modifier.height(16.dp))
         
         Text("重點追蹤個案", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        DashboardActionCard("林大華 (102班)", "目前狀態：法院審理中 (已轉介律師)", "查看歷程")
-        DashboardActionCard("張美美 (305班)", "目前狀態：休學中 (定期電訪追蹤)", "更新記錄")
-        DashboardActionCard("李小強 (201班)", "目前狀態：轉介精神科醫師 (藥物控制中)", "查看詳情")
+        
+        if (students.isNotEmpty()) {
+            students.take(3).forEach { student ->
+                DashboardActionCard(
+                    title = "${student.name} (${student.currentClass}班)",
+                    description = "目前狀態：${student.status} ${student.legalStatus?.let {"($it)"} ?: ""}",
+                    actionText = "查看歷程",
+                    onClick = { onNavigateToStudent(student.studentId, student.name) }
+                )
+            }
+        } else {
+            DashboardActionCard(
+                title = "林大華 (102班)", 
+                description = "目前狀態：法院審理中 (已轉介律師)", 
+                actionText = "查看歷程",
+                onClick = { onNavigateToStudent("112002", "林大華") }
+            )
+            DashboardActionCard(
+                title = "張美美 (305班)", 
+                description = "目前狀態：休學中 (定期電訪追蹤)", 
+                actionText = "更新記錄",
+                onClick = { onNavigateToStudent("112003", "張美美") }
+            )
+        }
     }
 }
 
@@ -198,7 +242,7 @@ fun InteractionHub() {
 }
 
 @Composable
-fun DashboardActionCard(title: String, description: String, actionText: String) {
+fun DashboardActionCard(title: String, description: String, actionText: String, onClick: () -> Unit = {}) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -215,7 +259,7 @@ fun DashboardActionCard(title: String, description: String, actionText: String) 
                 Text(text = title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Text(text = description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            TextButton(onClick = { /* TODO */ }) {
+            TextButton(onClick = onClick) {
                 Text(actionText)
             }
         }
