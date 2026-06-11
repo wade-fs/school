@@ -7,7 +7,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -79,11 +81,77 @@ fun DashboardScreen(role: String, onBack: () -> Unit) {
                 .padding(paddingValues)
         ) {
             when (selectedTabIndex) {
-                0 -> RoleFeatureContent(role = role)
+                0 -> {
+                    if (role == "counseling") {
+                        CounselingDashboard()
+                    } else {
+                        RoleFeatureContent(role = role)
+                    }
+                }
                 1 -> SubjectClassSwitcher()
                 2 -> InteractionHub()
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CounselingDashboard() {
+    Column(modifier = Modifier.padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("輔導個案管理", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.weight(1f))
+            IconButton(onClick = { /* TODO: Import CSV */ }) {
+                Icon(Icons.Default.Send, contentDescription = "匯入學生", tint = MaterialTheme.colorScheme.primary)
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        OutlinedTextField(
+            value = "",
+            onValueChange = {},
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("搜尋姓名、學號、或狀態 (如: 休學)") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            singleLine = true
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Quick Filters
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip(selected = true, onClick = {}, label = { Text("全部") })
+            FilterChip(selected = false, onClick = {}, label = { Text("高風險") })
+            FilterChip(selected = false, onClick = {}, label = { Text("法院/監獄") })
+            FilterChip(selected = false, onClick = {}, label = { Text("休學") })
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text("即將到來的預約", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        ) {
+            ListItem(
+                headlineContent = { Text("陳小明 (112001)", fontWeight = FontWeight.Bold) },
+                supportingContent = { Text("今日 14:30 - 第三次晤談 (人際關係)") },
+                trailingContent = { Text("15分鐘後", color = MaterialTheme.colorScheme.error) },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text("重點追蹤個案", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        DashboardActionCard("林大華 (102班)", "目前狀態：法院審理中 (已轉介律師)", "查看歷程")
+        DashboardActionCard("張美美 (305班)", "目前狀態：休學中 (定期電訪追蹤)", "更新記錄")
+        DashboardActionCard("李小強 (201班)", "目前狀態：轉介精神科醫師 (藥物控制中)", "查看詳情")
     }
 }
 
@@ -106,7 +174,7 @@ fun ClassCard(className: String, subject: String, status: String) {
             .padding(vertical = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Face, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(16.dp))
             Column {
