@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -118,19 +120,19 @@ private fun getIconForName(name: String): ImageVector {
         "edit_note" -> Icons.Default.Edit
         "campaign" -> Icons.Default.Notifications
         "contact_page" -> Icons.Default.Person
-        "grid_view" -> Icons.Default.List
+        "grid_view" -> Icons.AutoMirrored.Filled.List
         "schedule" -> Icons.Default.DateRange
-        "upload_file" -> Icons.Default.Send
+        "upload_file" -> Icons.AutoMirrored.Filled.Send
         "assessment" -> Icons.Default.Star
         "event_available" -> Icons.Default.CheckCircle
         "quiz" -> Icons.Default.Info
         "mood" -> Icons.Default.Face
         "signature" -> Icons.Default.Build
         "notifications_active" -> Icons.Default.Notifications
-        "chat" -> Icons.Default.Send
+        "chat" -> Icons.AutoMirrored.Filled.Send
         "assignment_ind" -> Icons.Default.AccountBox
         "security" -> Icons.Default.Lock
-        "topic" -> Icons.Default.List
+        "topic" -> Icons.AutoMirrored.Filled.List
         "draw" -> Icons.Default.Create
         "map" -> Icons.Default.Place
         else -> Icons.Default.Star
