@@ -32,21 +32,27 @@ class CounselorViewModel(application: android.app.Application) : androidx.lifecy
         viewModelScope.launch {
             _isImporting.value = true
             try {
+                // Request persistable URI permission if needed (though OpenDocument handles it for this session)
                 val importedList = withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri)?.use { inputStream ->
                         CsvParser.parseStudentCsv(inputStream)
                     } ?: emptyList()
                 }
                 
-                // Upsert logic: merge imported list with current list based on studentId
-                val currentMap = _students.value.associateBy { it.studentId }.toMutableMap()
-                importedList.forEach { student ->
-                    currentMap[student.studentId] = student // Overwrite with new data
+                if (importedList.isEmpty()) {
+                    android.util.Log.w("CounselorViewModel", "Imported list is empty or file could not be read.")
+                } else {
+                    android.util.Log.d("CounselorViewModel", "Successfully parsed ${importedList.size} students.")
+                    // Upsert logic: merge imported list with current list based on studentId
+                    val currentMap = _students.value.associateBy { it.studentId }.toMutableMap()
+                    importedList.forEach { student ->
+                        currentMap[student.studentId] = student 
+                    }
+                    _students.value = currentMap.values.toList().sortedBy { it.studentId }
                 }
-                _students.value = currentMap.values.toList().sortedBy { it.studentId }
                 
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("CounselorViewModel", "Error importing CSV", e)
             } finally {
                 _isImporting.value = false
             }

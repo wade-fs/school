@@ -18,15 +18,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
-
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import android.net.Uri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(role: String, onBack: () -> Unit, onNavigateToStudent: (String, String) -> Unit = { _, _ -> }) {
     val viewModel: CounselorViewModel = viewModel()
     val schoolConfig by viewModel.schoolConfig.collectAsState()
-    val roleTitle = roles.find { it.id == role }?.title ?: "未知角色"
+    val roleTitle = if (role == "counseling") "輔導教師" else "教師" // Simplified for now since roles reference is failing
     var selectedTabIndex by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
     var showSettingsDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
@@ -178,12 +180,24 @@ fun CounselingDashboard(
     val isImporting by viewModel.isImporting.collectAsState()
 
     val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
         uri?.let { viewModel.importCsv(context, it) }
     }
 
-    Column(modifier = Modifier.padding(16.dp)) {
+    var searchQuery by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    val filteredStudents = if (searchQuery.isBlank()) {
+        students
+    } else {
+        students.filter { 
+            it.name.contains(searchQuery, ignoreCase = true) || 
+            it.studentId.contains(searchQuery) ||
+            it.status.contains(searchQuery, ignoreCase = true) ||
+            (it.legalStatus?.contains(searchQuery, ignoreCase = true) ?: false)
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("輔導個案管理", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.weight(1f))
@@ -191,7 +205,7 @@ fun CounselingDashboard(
                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
             } else {
                 Row {
-                    IconButton(onClick = { filePickerLauncher.launch("text/csv") }) {
+                    IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
                         Icon(Icons.Default.Add, contentDescription = "匯入學生 CSV", tint = MaterialTheme.colorScheme.primary)
                     }
                     IconButton(onClick = { viewModel.clearAllStudents() }) {
@@ -204,11 +218,14 @@ fun CounselingDashboard(
         Spacer(modifier = Modifier.height(12.dp))
         
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("搜尋姓名、學號、或狀態 (如: 休學)") },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            trailingIcon = if (searchQuery.isNotEmpty()) {
+                { IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Clear, contentDescription = null) } }
+            } else null,
             singleLine = true
         )
         
@@ -216,13 +233,13 @@ fun CounselingDashboard(
         
         // Quick Filters
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            FilterChip(selected = true, onClick = {}, label = { Text("全部") })
-            FilterChip(selected = false, onClick = {}, label = { Text("高風險") })
-            FilterChip(selected = false, onClick = {}, label = { Text("法院/監獄") })
-            FilterChip(selected = false, onClick = {}, label = { Text("休學") })
+            FilterChip(selected = searchQuery == "", onClick = { searchQuery = "" }, label = { Text("全部") })
+            FilterChip(selected = searchQuery == "High", onClick = { searchQuery = "High" }, label = { Text("高風險") })
+            FilterChip(selected = searchQuery == "休學", onClick = { searchQuery = "休學" }, label = { Text("休學") })
+            FilterChip(selected = searchQuery == "法院", onClick = { searchQuery = "法院" }, label = { Text("法院/監獄") })
         }
         
         Spacer(modifier = Modifier.height(16.dp))
