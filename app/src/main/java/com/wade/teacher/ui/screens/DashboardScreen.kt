@@ -124,7 +124,7 @@ fun CounselingDashboard(
                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
             } else {
                 IconButton(onClick = { filePickerLauncher.launch("text/csv") }) {
-                    Icon(Icons.Default.Send, contentDescription = "匯入學生 CSV", tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Add, contentDescription = "匯入學生 CSV", tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -174,7 +174,7 @@ fun CounselingDashboard(
         Text("重點追蹤個案", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         
         if (students.isNotEmpty()) {
-            students.take(3).forEach { student ->
+            students.forEach { student ->
                 DashboardActionCard(
                     title = "${student.name} (${student.currentClass}班)",
                     description = "目前狀態：${student.status} ${student.legalStatus?.let {"($it)"} ?: ""}",

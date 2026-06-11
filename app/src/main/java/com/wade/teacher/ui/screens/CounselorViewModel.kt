@@ -8,11 +8,13 @@ import com.wade.teacher.data.local.entity.Student
 import com.wade.teacher.util.CsvParser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class CounselorViewModel : ViewModel() {
+class CounselorViewModel(application: android.app.Application) : androidx.lifecycle.AndroidViewModel(application) {
     private val _students = MutableStateFlow<List<Student>>(emptyList())
     val students: StateFlow<List<Student>> = _students
 
@@ -29,9 +31,6 @@ class CounselorViewModel : ViewModel() {
                     } ?: emptyList()
                 }
                 
-                // For prototype, we just keep them in memory.
-                // In a production app with Room configured properly, 
-                // we would call counselorDao.insertStudents(importedStudents)
                 _students.value = importedStudents
             } catch (e: Exception) {
                 e.printStackTrace()

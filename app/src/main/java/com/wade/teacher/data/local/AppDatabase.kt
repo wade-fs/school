@@ -9,4 +9,21 @@ import com.wade.teacher.data.local.entity.CaseLog
 @Database(entities = [Student::class, CaseLog::class], version = 1, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun counselorDao(): CounselorDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
+        fun getDatabase(context: android.content.Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = androidx.room.Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "teacher_database"
+                ).build()
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
 }

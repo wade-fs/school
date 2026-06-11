@@ -21,7 +21,11 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StudentDetailScreen(studentId: String, studentName: String, onBack: () -> Unit) {
+fun StudentDetailScreen(
+    studentId: String, 
+    studentName: String, 
+    onBack: () -> Unit
+) {
     var recognizedText by remember { mutableStateOf("") }
     var isRecording by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -70,7 +74,7 @@ fun StudentDetailScreen(studentId: String, studentName: String, onBack: () -> Un
                 containerColor = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
             ) {
                 Icon(
-                    imageVector = if (isRecording) Icons.Default.Clear else Icons.Default.PlayArrow,
+                    imageVector = if (isRecording) Icons.Default.Clear else Icons.Default.Mic,
                     contentDescription = "語音輸入",
                     tint = MaterialTheme.colorScheme.onPrimary
                 )
