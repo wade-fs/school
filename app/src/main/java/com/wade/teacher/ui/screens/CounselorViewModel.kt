@@ -96,9 +96,9 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun scheduleAppointment(studentId: String, timestamp: Long) {
+    fun scheduleAppointment(studentId: String, timestamp: Long, type: String = "晤談") {
         viewModelScope.launch(Dispatchers.IO) {
-            val appointment = Appointment(studentId = studentId, scheduledAt = timestamp, type = "晤談")
+            val appointment = Appointment(studentId = studentId, scheduledAt = timestamp, type = type)
             dao.upsertAppointment(appointment)
             
             // Also update legacy field in profile for display
@@ -112,6 +112,12 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
             val profile = dao.getProfileForStudent(studentId).first() ?: CounselingProfile(studentId)
             dao.upsertProfile(profile.copy(status = status, legalStatus = legalStatus, priority = priority))
         }
+    }
+
+    fun getTodayAppointments(startOfDay: Long): Flow<List<Appointment>> {
+        val endOfDay = startOfDay + 86400000L
+        return dao.getUpcomingAppointments(startOfDay)
+            .map { list -> list.filter { it.scheduledAt < endOfDay } }
     }
 
     // New: Encrypted Case Log

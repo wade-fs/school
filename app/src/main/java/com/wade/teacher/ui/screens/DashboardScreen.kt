@@ -23,6 +23,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import android.net.Uri
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -246,27 +248,41 @@ fun CounselingDashboard(
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        Text("即將到來的預約", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        val startOfToday = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        val todayAppointments by viewModel.getTodayAppointments(startOfToday).collectAsState(emptyList())
+
+        Text("今日晤談 (${todayAppointments.size})", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         
-        val upcomingAppointments = studentsWithProfiles.filter { it.profile?.nextAppointment != null }
-            .sortedBy { it.profile?.nextAppointment }
-        if (upcomingAppointments.isNotEmpty()) {
-            upcomingAppointments.take(1).forEach { entry ->
+        if (todayAppointments.isNotEmpty()) {
+            todayAppointments.forEach { appointment ->
+                val studentName = studentsWithProfiles.find { it.student.studentId == appointment.studentId }?.student?.name ?: appointment.studentId
+                val timeStr = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(appointment.scheduledAt))
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    onClick = { onNavigateToStudent(entry.student.studentId, entry.student.name) }
+                    onClick = { onNavigateToStudent(appointment.studentId, studentName) }
                 ) {
                     ListItem(
-                        headlineContent = { Text("${entry.student.name} (${entry.student.studentId})", fontWeight = FontWeight.Bold) },
-                        supportingContent = { Text("預約時間: 2026-06-12 14:30") }, 
-                        trailingContent = { Text("明日", color = MaterialTheme.colorScheme.error) },
+                        headlineContent = { Text("$studentName ($timeStr)", fontWeight = FontWeight.Bold) },
+                        supportingContent = { Text("類型: ${appointment.type}") }, 
+                        trailingContent = { 
+                            Row {
+                                TextButton(onClick = { /* TODO mark done */ }) { Text("完成") }
+                                TextButton(onClick = { /* TODO mark missed */ }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("未赴約") }
+                            }
+                        },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
                 }
             }
         } else {
-            Text("目前無預約", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
+            Text("今日無預約", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
         }
         
         // Admin Actions
@@ -306,14 +322,18 @@ fun CounselingDashboard(
         Text(listTitle, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         
         if (filteredEntries.isNotEmpty()) {
-            filteredEntries.forEach { entry ->
-                val semesterText = if (entry.student.currentSemester == 1) "上" else "下"
-                DashboardActionCard(
-                    title = "${entry.student.name} (${entry.student.currentGrade}年$semesterText ${entry.student.currentClass}班)",
-                    description = "學號：${entry.student.studentId} | 狀態：${entry.profile?.status ?: "Active"} ${entry.profile?.legalStatus?.let {"($it)"} ?: ""}",
-                    actionText = "查看",
-                    onClick = { onNavigateToStudent(entry.student.studentId, entry.student.name) }
-                )
+            LazyColumn(
+                modifier = Modifier.weight(1f)
+            ) {
+                items(filteredEntries, key = { it.student.studentId }) { entry ->
+                    val semesterText = if (entry.student.currentSemester == 1) "上" else "下"
+                    DashboardActionCard(
+                        title = "${entry.student.name} (${entry.student.currentGrade}年$semesterText ${entry.student.currentClass}班)",
+                        description = "學號：${entry.student.studentId} | 狀態：${entry.profile?.status ?: "Active"} ${entry.profile?.legalStatus?.let {"($it)"} ?: ""}",
+                        actionText = "查看",
+                        onClick = { onNavigateToStudent(entry.student.studentId, entry.student.name) }
+                    )
+                }
             }
         } else {
             Text(if (studentsWithProfiles.isEmpty()) "尚未匯入學生資料" else "找不到符合的學生", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))

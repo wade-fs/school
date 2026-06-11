@@ -12,6 +12,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -43,6 +45,157 @@ fun StudentDetailScreen(
     val studentWithProfile by viewModel.studentsWithProfiles.collectAsState()
     val currentEntry = studentWithProfile.find { it.student.studentId == studentId }
     val logs by viewModel.getLogsForStudent(studentId).collectAsState(initial = emptyList())
+
+    var showStatusDialog by remember { mutableStateOf(false) }
+    var editStatus by remember { mutableStateOf("Active") }
+    var editLegal by remember { mutableStateOf("") }
+    var editPriority by remember { mutableStateOf("Normal") }
+
+    var showScheduleDialog by remember { mutableStateOf(false) }
+    var scheduleType by remember { mutableStateOf("初談") }
+
+    LaunchedEffect(currentEntry) {
+        if (currentEntry != null) {
+            editStatus = currentEntry.profile?.status ?: "Active"
+            editLegal = currentEntry.profile?.legalStatus ?: "無"
+            editPriority = currentEntry.profile?.priority ?: "Normal"
+        }
+    }
+
+    if (showStatusDialog) {
+        AlertDialog(
+            onDismissRequest = { showStatusDialog = false },
+            title = { Text("編輯學生狀態") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val statusOptions = listOf("Active", "休學", "轉學", "結案", "外部轉介")
+                    var expandedStatus by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = expandedStatus,
+                        onExpandedChange = { expandedStatus = it }
+                    ) {
+                        OutlinedTextField(
+                            value = editStatus,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("輔導狀態") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStatus) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedStatus,
+                            onDismissRequest = { expandedStatus = false }
+                        ) {
+                            statusOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = { editStatus = option; expandedStatus = false }
+                                )
+                            }
+                        }
+                    }
+
+                    Text("風險等級", style = MaterialTheme.typography.labelSmall)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        listOf("Normal", "Low", "Medium", "High").forEach { p ->
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { editPriority = p }) {
+                                RadioButton(selected = editPriority == p, onClick = { editPriority = p })
+                                Text(p, fontSize = 12.sp)
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = editLegal,
+                        onValueChange = { editLegal = it },
+                        label = { Text("法律狀態說明") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.setStudentStatus(studentId, editStatus, editLegal, editPriority)
+                    showStatusDialog = false
+                }) { Text("儲存") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStatusDialog = false }) { Text("取消") }
+            }
+        )
+    }
+
+    val calendar = Calendar.getInstance()
+    val timePickerDialog = android.app.TimePickerDialog(
+        context,
+        { _, hour, minute ->
+            calendar.set(Calendar.HOUR_OF_DAY, hour)
+            calendar.set(Calendar.MINUTE, minute)
+            viewModel.scheduleAppointment(studentId, calendar.timeInMillis, scheduleType)
+            Toast.makeText(context, "預約已排程", Toast.LENGTH_SHORT).show()
+        },
+        calendar.get(Calendar.HOUR_OF_DAY),
+        calendar.get(Calendar.MINUTE),
+        true
+    )
+    val datePickerDialog = android.app.DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            calendar.set(Calendar.YEAR, year)
+            calendar.set(Calendar.MONTH, month)
+            calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+            timePickerDialog.show()
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+
+    if (showScheduleDialog) {
+        AlertDialog(
+            onDismissRequest = { showScheduleDialog = false },
+            title = { Text("新增預約") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val typeOptions = listOf("初談", "後續", "電訪", "家訪")
+                    var expandedType by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = expandedType,
+                        onExpandedChange = { expandedType = it }
+                    ) {
+                        OutlinedTextField(
+                            value = scheduleType,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("預約類型") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedType,
+                            onDismissRequest = { expandedType = false }
+                        ) {
+                            typeOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = { scheduleType = option; expandedType = false }
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showScheduleDialog = false
+                    datePickerDialog.show()
+                }) { Text("下一步 (選時間)") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showScheduleDialog = false }) { Text("取消") }
+            }
+        )
+    }
 
     val speechRecognizer = remember { SpeechRecognizer.createSpeechRecognizer(context) }
     
@@ -123,12 +276,31 @@ fun StudentDetailScreen(
                         val legal = currentEntry?.profile?.legalStatus ?: "無"
                         val priority = currentEntry?.profile?.priority ?: "Normal"
                         
-                        Text("目前狀態: $status [$priority]", fontWeight = FontWeight.Bold)
-                        Text("法律狀態: $legal")
-                        if (currentEntry?.profile?.nextAppointment != null) {
-                            val date = Date(currentEntry!!.profile!!.nextAppointment!!)
-                            val format = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-                            Text("下次預約: ${format.format(date)}")
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column {
+                                Text("目前狀態: $status [$priority]", fontWeight = FontWeight.Bold)
+                                Text("法律狀態: $legal")
+                            }
+                            IconButton(onClick = { showStatusDialog = true }) {
+                                Icon(Icons.Default.Edit, contentDescription = "編輯狀態")
+                            }
+                        }
+                        
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column {
+                                if (currentEntry?.profile?.nextAppointment != null) {
+                                    val date = Date(currentEntry!!.profile!!.nextAppointment!!)
+                                    val format = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                                    Text("下次預約: ${format.format(date)}")
+                                } else {
+                                    Text("尚未安排預約")
+                                }
+                            }
+                            Button(onClick = { showScheduleDialog = true }) {
+                                Text("新增預約")
+                            }
                         }
                     }
                 }
@@ -144,24 +316,6 @@ fun StudentDetailScreen(
                     modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
                     placeholder = { Text("錄音辨識文字會出現在此，也可手動輸入...") }
                 )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Button(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_SUBJECT, "【個案紀錄】$studentName ($studentId)")
-                            putExtra(Intent.EXTRA_TEXT, sessionText)
-                        }
-                        context.startActivity(Intent.createChooser(intent, "分享至..."))
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Share, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("分享本次文字稿")
-                }
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider()
