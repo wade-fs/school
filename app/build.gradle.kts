@@ -72,7 +72,12 @@ android {
     }
 }
 
-//archivesBaseName = "com.wade.school-${android.defaultConfig.versionName}"
+
+
+base {
+    // Use the versionName defined in defaultConfig for the archive name
+    archivesName.set("com.wade.school-${android.defaultConfig.versionName}")
+}
 
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
