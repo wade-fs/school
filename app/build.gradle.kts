@@ -22,6 +22,17 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val keyFile = System.getenv("KEY_FILE")
+            if (keyFile != null) {
+                storeFile = file(keyFile)
+                keyAlias = System.getenv("KEY_ALIAS") ?: ""
+                keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+                storePassword = System.getenv("STORE_PASSWORD") ?: ""
+            }
+        }
+    }
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -35,9 +46,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
+    // Using task-based configuration to avoid the top-level deprecation warning while maintaining compatibility
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
+
     buildFeatures {
         compose = true
     }
@@ -52,7 +67,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
-    
+
     val composeBom = platform("androidx.compose:compose-bom:2024.05.00")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
@@ -69,9 +84,9 @@ dependencies {
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
-    
+
     implementation("io.ktor:ktor-client-android:2.3.11")
-    
+
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
