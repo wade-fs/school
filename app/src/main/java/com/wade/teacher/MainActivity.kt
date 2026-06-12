@@ -14,6 +14,7 @@ import androidx.navigation.compose.rememberNavController
 import com.wade.teacher.ui.screens.RoleSelectorScreen
 import com.wade.teacher.ui.screens.DashboardScreen
 import com.wade.teacher.ui.screens.StudentDetailScreen
+import com.wade.teacher.ui.screens.MoodCheckScreen
 import com.wade.teacher.ui.theme.TaiwanTeacherAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -48,6 +49,9 @@ fun TeacherAppNavigation() {
                 onBack = { navController.popBackStack() },
                 onNavigateToStudent = { id, name -> 
                     navController.navigate("student_detail/$id/$name")
+                },
+                onNavigateToMoodCheck = {
+                    navController.navigate("mood_check")
                 }
             )
         }
@@ -57,6 +61,12 @@ fun TeacherAppNavigation() {
             StudentDetailScreen(
                 studentId = id,
                 studentName = name,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("mood_check") {
+            MoodCheckScreen(
+                viewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
                 onBack = { navController.popBackStack() }
             )
         }

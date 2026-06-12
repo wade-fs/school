@@ -24,6 +24,10 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     val students: StateFlow<List<Student>> = dao.getAllStudents()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val classes: StateFlow<List<String>> = dao.getAllStudents()
+        .map { students -> students.map { it.currentClass }.distinct().sorted() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private val _isImporting = MutableStateFlow(false)
     val isImporting: StateFlow<Boolean> = _isImporting
 
@@ -146,5 +150,65 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         } catch (e: Exception) {
             "解密失敗"
         }
+    }
+
+    // --- Sprint 2: Mood Check ---
+
+    private val _activeSessionId = MutableStateFlow<Int?>(null)
+    val activeSessionId: StateFlow<Int?> = _activeSessionId
+
+    fun startMoodCheckSession(classId: String, counselorId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val sessionId = dao.insertMoodCheckSession(
+                MoodCheckSession(
+                    classId = classId,
+                    conductedAt = System.currentTimeMillis(),
+                    conductedBy = counselorId
+                )
+            )
+            _activeSessionId.value = sessionId.toInt()
+        }
+    }
+
+    fun recordMoodResponse(sessionId: Int, studentId: String, score: Int, note: String?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertMoodCheckResponse(
+                MoodCheckResponse(sessionId = sessionId, studentId = studentId,
+                                  score = score, note = note)
+            )
+        }
+    }
+
+    fun finishMoodCheckSession() {
+        _activeSessionId.value = null
+    }
+
+    fun getRecentMoodSessions(classId: String): Flow<List<MoodCheckSession>> = dao.getLatestSessions(classId, 5)
+
+    val lastSession: Flow<MoodCheckSession?> = dao.getLastSession()
+
+    fun getResponsesForSession(sessionId: Int) = dao.getResponsesForSession(sessionId)
+
+    fun getClassMoodAlerts(classId: String): Flow<List<String>> = dao.getLatestSessions(classId, 2).map { sessions ->
+        if (sessions.isEmpty()) return@map emptyList<String>()
+        
+        val latestSession = sessions[0]
+        val previousSession = if (sessions.size > 1) sessions[1] else null
+        
+        val latestResponses = dao.getResponsesForSession(latestSession.id).first()
+        val prevResponsesMap = if (previousSession != null) {
+            dao.getResponsesForSession(previousSession.id).first().associateBy { it.studentId }
+        } else {
+            emptyMap()
+        }
+        
+        latestResponses.filter { resp ->
+            val score = resp.score
+            val isLowScore = score <= 3
+            val prevScore = prevResponsesMap[resp.studentId]?.score
+            val isDropping = prevScore != null && (prevScore - score >= 2)
+            
+            isLowScore || isDropping
+        }.map { it.studentId }
     }
 }

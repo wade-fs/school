@@ -79,6 +79,12 @@ interface CounselorDao {
     @Query("SELECT * FROM mood_check_responses WHERE sessionId = :sessionId")
     fun getResponsesForSession(sessionId: Int): Flow<List<MoodCheckResponse>>
 
+    @Query("SELECT * FROM mood_check_sessions WHERE classId = :classId ORDER BY conductedAt DESC LIMIT :limit")
+    fun getLatestSessions(classId: String, limit: Int): Flow<List<MoodCheckSession>>
+
+    @Query("SELECT * FROM mood_check_sessions ORDER BY conductedAt DESC LIMIT 1")
+    fun getLastSession(): Flow<MoodCheckSession?>
+
     // External Resources
     @Query("SELECT * FROM external_resources")
     fun getExternalResources(): Flow<List<ExternalResource>>

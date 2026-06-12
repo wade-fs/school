@@ -149,63 +149,20 @@ val todayAppointments by viewModel.getTodayAppointments(startOfToday).collectAsS
 
 ---
 
-### Sprint 2 — 心情溫度計（約 1 週）
+### Sprint 2 — 心情溫度計（✅ 完整）
 
-Entity 和 DAO 都已就緒（`MoodCheckSession`、`MoodCheckResponse`、相關 DAO 方法），需要建 UI 和 ViewModel 方法。
+Entity 和 DAO 都已就緒，已完成 UI 和 ViewModel 方法。
 
-#### 2-A：ViewModel 新增方法
+#### 2-A：ViewModel 新增方法 (✅)
 
-```kotlin
-// 發起一次全班週測
-fun startMoodCheckSession(classId: String, counselorId: String) {
-    viewModelScope.launch(Dispatchers.IO) {
-        val sessionId = dao.insertMoodCheckSession(
-            MoodCheckSession(
-                classId = classId,
-                conductedAt = System.currentTimeMillis(),
-                conductedBy = counselorId
-            )
-        )
-        // TODO: 未來透過推播通知學生填寫
-        _activeSessionId.value = sessionId.toInt()
-    }
-}
+- `startMoodCheckSession`: 發起施測
+- `recordMoodResponse`: 紀錄學生分數
+- `getClassMoodAlerts`: 班級預警邏輯 (分數 <= 3 或 下降 >= 2)
 
-// 輔導老師手動代填（面談當下直接輸入）
-fun recordMoodResponse(sessionId: Int, studentId: String, score: Int, note: String?) {
-    viewModelScope.launch(Dispatchers.IO) {
-        dao.insertMoodCheckResponse(
-            MoodCheckResponse(sessionId = sessionId, studentId = studentId,
-                              score = score, note = note)
-        )
-    }
-}
+#### 2-B：UI 規劃 (✅)
 
-// 班級預警：本週平均 < 4 或下降超過 2 分
-fun getClassMoodAlert(classId: String): Flow<List<String>> // 回傳需關注學生 ID 清單
-```
-
-#### 2-B：UI 規劃
-
-**入口**：`CounselingDashboard` 新增「心情溫度計」卡片，顯示「上次施測：X 天前，2 人需關注」
-
-**施測頁 `MoodCheckScreen`**：
-```
-班級選擇（下拉）
-  ↓
-學生清單（每人一列）
-  ├── 姓名 + 學號
-  ├── 滑桿（1-10 分）或數字輸入
-  └── 備註欄（可選填）
-  ↓
-「完成施測」按鈕 → 寫入 Room → 計算預警名單
-```
-
-**結果頁**：
-- 班級分數長條圖（橫向，依分數高低排序）
-- 紅色標示：分數 ≤ 3
-- 黃色標示：比上次下降 ≥ 2 分
-- 點擊學生 → 跳轉 `StudentDetailScreen`
+- `CounselingDashboard` 新增「心情溫度計」卡片與預警 Banner
+- `MoodCheckScreen`: 班級選擇、學生滑桿輸入、完成送出
 
 ---
 

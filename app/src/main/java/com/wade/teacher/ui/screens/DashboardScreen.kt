@@ -29,7 +29,12 @@ import android.net.Uri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(role: String, onBack: () -> Unit, onNavigateToStudent: (String, String) -> Unit = { _, _ -> }) {
+fun DashboardScreen(
+    role: String, 
+    onBack: () -> Unit, 
+    onNavigateToStudent: (String, String) -> Unit = { _, _ -> },
+    onNavigateToMoodCheck: () -> Unit = {}
+) {
     val viewModel: CounselorViewModel = viewModel()
     val schoolConfig by viewModel.schoolConfig.collectAsState()
     val roleTitle = roles.find { it.id == role }?.title ?: "未知角色"
@@ -110,7 +115,7 @@ fun DashboardScreen(role: String, onBack: () -> Unit, onNavigateToStudent: (Stri
             when (selectedTabIndex) {
                 0 -> {
                     if (role == "counseling") {
-                        CounselingDashboard(onNavigateToStudent, viewModel)
+                        CounselingDashboard(onNavigateToStudent, onNavigateToMoodCheck, viewModel)
                     } else {
                         RoleFeatureContent(role = role)
                     }
@@ -177,6 +182,7 @@ fun SchoolSettingsDialog(
 @Composable
 fun CounselingDashboard(
     onNavigateToStudent: (String, String) -> Unit,
+    onNavigateToMoodCheck: () -> Unit,
     viewModel: CounselorViewModel
 ) {
     val context = LocalContext.current
@@ -214,6 +220,49 @@ fun CounselingDashboard(
                     }
                     IconButton(onClick = { viewModel.clearAllStudents() }) {
                         Icon(Icons.Default.Delete, contentDescription = "清空所有資料", tint = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // --- Sprint 2: Mood Check Card ---
+        val lastSession by viewModel.lastSession.collectAsState(null)
+        val lastResponses by if (lastSession != null) {
+            viewModel.getResponsesForSession(lastSession!!.id).collectAsState(emptyList())
+        } else {
+            androidx.compose.runtime.remember { mutableStateOf(emptyList<com.wade.teacher.data.local.entity.MoodCheckResponse>()) }
+        }
+
+        val moodDesc = if (lastSession != null) {
+            val days = (System.currentTimeMillis() - lastSession!!.conductedAt) / 86400000L
+            val alertCount = lastResponses.count { it.score <= 3 }
+            "上次施測: ${lastSession!!.classId} ($days 天前)，${alertCount} 人需關注"
+        } else {
+            "尚未進行任何心情施測"
+        }
+
+        DashboardActionCard(
+            title = "心情溫度計",
+            description = moodDesc,
+            actionText = "開始施測",
+            onClick = onNavigateToMoodCheck
+        )
+
+        // Mood Alerts
+        if (lastSession != null) {
+            val alerts by viewModel.getClassMoodAlerts(lastSession!!.classId).collectAsState(emptyList())
+            if (alerts.isNotEmpty()) {
+                val alertNames = alerts.map { id -> studentsWithProfiles.find { it.student.studentId == id }?.student?.name ?: id }
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("需關注: ${alertNames.joinToString(", ")} (心情分數低落或大幅下降)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
                     }
                 }
             }
