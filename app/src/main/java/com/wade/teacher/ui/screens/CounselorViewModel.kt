@@ -33,11 +33,6 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     val activeCounselingStudents: StateFlow<List<StudentWithProfile>> = dao.getStudentsWithActiveProfiles()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // 導師：僅顯示導師班級的學生
-    val homeroomStudents: StateFlow<List<Student>> = combine(dao.getAllStudents(), schoolConfigFlow()) { list, config ->
-        list.filter { it.currentClass == config.homeroomClass }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
     val students: StateFlow<List<Student>> = dao.getAllStudents()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -53,6 +48,11 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     val schoolConfig: StateFlow<SchoolConfig> = _schoolConfig
     
     private fun schoolConfigFlow() = _schoolConfig
+
+    // 導師：僅顯示導師班級的學生（必須在 _schoolConfig 宣告之後初始化）
+    val homeroomStudents: StateFlow<List<Student>> = combine(dao.getAllStudents(), _schoolConfig) { list, config ->
+        list.filter { it.currentClass == config.homeroomClass }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // 教育部學校清單 (未來可接 API，目前為靜態示範資料)
     private val _moeSchools = MutableStateFlow<List<MoeSchool>>(emptyList())

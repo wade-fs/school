@@ -29,11 +29,7 @@ interface CounselorDao {
     fun getAllStudentsWithProfiles(): Flow<List<StudentWithProfile>>
 
     @Transaction
-    @Query("""
-        SELECT s.* FROM students s
-        INNER JOIN counseling_profiles p ON s.studentId = p.studentId
-        ORDER BY s.studentId ASC
-    """)
+    @Query("SELECT * FROM students WHERE studentId IN (SELECT studentId FROM counseling_profiles WHERE isKeyTracking = 1 OR status != 'Active')")
     fun getStudentsWithActiveProfiles(): Flow<List<StudentWithProfile>>
 
     @Query("SELECT * FROM counseling_profiles WHERE studentId = :studentId")
