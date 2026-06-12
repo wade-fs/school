@@ -23,9 +23,10 @@ import kotlinx.coroutines.launch
         MoodCheckResponse::class,
         ExternalResource::class,
         AuditLog::class,
-        CounselorTeacherNote::class
+        CounselorTeacherNote::class,
+        TimetableEntry::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

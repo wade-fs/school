@@ -115,4 +115,14 @@ interface CounselorDao {
     @Query("SELECT * FROM audit_logs ORDER BY performedAt DESC")
     fun getAllAuditLogs(): Flow<List<AuditLog>>
 
+    // Timetable
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTimetableEntries(entries: List<TimetableEntry>)
+
+    @Query("SELECT * FROM timetable_entries ORDER BY dayOfWeek ASC, period ASC")
+    fun getFullTimetable(): Flow<List<TimetableEntry>>
+
+    @Query("DELETE FROM timetable_entries")
+    suspend fun deleteFullTimetable()
+
 }

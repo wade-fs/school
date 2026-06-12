@@ -119,10 +119,10 @@ fun DashboardScreen(
         ) {
             when (selectedTabIndex) {
                 0 -> {
-                    if (role == "counseling") {
-                        CounselingDashboard(onNavigateToStudent, onNavigateToMoodCheck, onNavigateToResources, viewModel)
-                    } else {
-                        RoleFeatureContent(role = role)
+                    when (role) {
+                        "counseling" -> CounselingDashboard(onNavigateToStudent, onNavigateToMoodCheck, onNavigateToResources, viewModel)
+                        "subject" -> SubjectTeacherDashboard()
+                        else -> RoleFeatureContent(role = role)
                     }
                 }
                 1 -> SubjectClassSwitcher()
@@ -230,7 +230,7 @@ fun SchoolSettingsDialog(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun CounselingDashboard(
     onNavigateToStudent: (String, String) -> Unit,
@@ -260,155 +260,116 @@ fun CounselingDashboard(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("輔導個案管理", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.weight(1f))
-            if (isImporting) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-            } else {
-                Row {
-                    IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
-                        Icon(Icons.Default.Add, contentDescription = "匯入學生 CSV", tint = MaterialTheme.colorScheme.primary)
-                    }
-                    IconButton(onClick = { viewModel.clearAllStudents() }) {
-                        Icon(Icons.Default.Delete, contentDescription = "清空所有資料", tint = MaterialTheme.colorScheme.error)
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp)
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("輔導個案管理", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.weight(1f))
+                if (isImporting) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                } else {
+                    Row {
+                        IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
+                            Icon(Icons.Default.Add, contentDescription = "匯入", tint = MaterialTheme.colorScheme.primary)
+                        }
+                        IconButton(onClick = { viewModel.clearAllStudents() }) {
+                            Icon(Icons.Default.Delete, contentDescription = "清空", tint = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             }
-        }
-        
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // --- Sprint 2: Mood Check Card ---
-        val lastSession by viewModel.lastSession.collectAsState(null)
-        val lastResponses by if (lastSession != null) {
-            viewModel.getResponsesForSession(lastSession!!.id).collectAsState(emptyList())
-        } else {
-            remember { mutableStateOf(emptyList<com.wade.teacher.data.local.entity.MoodCheckResponse>()) }
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
-        val moodDesc = if (lastSession != null) {
-            val days = (System.currentTimeMillis() - lastSession!!.conductedAt) / 86400000L
-            val alertCount = lastResponses.count { it.score <= 3 }
-            "上次施測: ${lastSession!!.classId} ($days 天前)，${alertCount} 人需關注"
-        } else {
-            "尚未進行任何心情施測"
+        // Feature Cards
+        item {
+            val lastSession by viewModel.lastSession.collectAsState(null)
+            val lastResponses by if (lastSession != null) {
+                viewModel.getResponsesForSession(lastSession!!.id).collectAsState(emptyList())
+            } else {
+                remember { mutableStateOf(emptyList<com.wade.teacher.data.local.entity.MoodCheckResponse>()) }
+            }
+
+            val moodDesc = if (lastSession != null) {
+                val days = (System.currentTimeMillis() - lastSession!!.conductedAt) / 86400000L
+                val alertCount = lastResponses.count { it.score <= 3 }
+                "上次施測: ${lastSession!!.classId} ($days 天前)，${alertCount} 人需關注"
+            } else {
+                "尚未進行任何心情施測"
+            }
+
+            DashboardActionCard(
+                title = "心情溫度計",
+                description = moodDesc,
+                actionText = "開始施測",
+                onClick = onNavigateToMoodCheck
+            )
         }
 
-        DashboardActionCard(
-            title = "心情溫度計",
-            description = moodDesc,
-            actionText = "開始施測",
-            onClick = onNavigateToMoodCheck
-        )
-
-        // --- Sprint 5: External Resources Card ---
-        DashboardActionCard(
-            title = "校外資源庫",
-            description = "包含安心專線、生命線等 24 小時求助資源",
-            actionText = "查看清單",
-            onClick = onNavigateToResources
-        )
+        item {
+            DashboardActionCard(
+                title = "校外資源庫",
+                description = "24 小時求助專線與社福機構資訊",
+                actionText = "查看清單",
+                onClick = onNavigateToResources
+            )
+        }
 
         // Mood Alerts
-        if (lastSession != null) {
-            val alerts by viewModel.getClassMoodAlerts(lastSession!!.classId).collectAsState(emptyList())
-            if (alerts.isNotEmpty()) {
-                val alertNames = alerts.map { id -> studentsWithProfiles.find { it.student.studentId == id }?.student?.name ?: id }
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-                ) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("需關注: ${alertNames.joinToString(", ")} (心情分數低落或大幅下降)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+        item {
+            val lastSession by viewModel.lastSession.collectAsState(null)
+            if (lastSession != null) {
+                val alerts by viewModel.getClassMoodAlerts(lastSession!!.classId).collectAsState(emptyList())
+                if (alerts.isNotEmpty()) {
+                    val alertNames = alerts.map { id -> studentsWithProfiles.find { it.student.studentId == id }?.student?.name ?: id }
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("需關注: ${alertNames.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+                        }
                     }
                 }
             }
         }
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("搜尋姓名、學號、或狀態 (如: 休學)") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            trailingIcon = if (searchQuery.isNotEmpty()) {
-                { IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Clear, contentDescription = null) } }
-            } else null,
-            singleLine = true
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Quick Filters
-        Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterChip(selected = searchQuery == "", onClick = { searchQuery = "" }, label = { Text("全部") })
-            FilterChip(selected = searchQuery == "High", onClick = { searchQuery = "High" }, label = { Text("高風險") })
-            FilterChip(selected = searchQuery == "休學", onClick = { searchQuery = "休學" }, label = { Text("休學") })
-            FilterChip(selected = searchQuery == "法院", onClick = { searchQuery = "法院" }, label = { Text("法院/監獄") })
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        val startOfToday = java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, 0)
-            set(java.util.Calendar.MINUTE, 0)
-            set(java.util.Calendar.SECOND, 0)
-            set(java.util.Calendar.MILLISECOND, 0)
-        }.timeInMillis
 
-        val todayAppointments by viewModel.getTodayAppointments(startOfToday).collectAsState(emptyList())
+        // Today's Appointments
+        item {
+            val startOfToday = java.util.Calendar.getInstance().apply {
+                set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            val todayAppointments by viewModel.getTodayAppointments(startOfToday).collectAsState(emptyList())
 
-        Text("今日晤談 (${todayAppointments.size})", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-        
-        if (todayAppointments.isNotEmpty()) {
-            todayAppointments.forEach { appointment ->
-                val studentName = studentsWithProfiles.find { it.student.studentId == appointment.studentId }?.student?.name ?: appointment.studentId
-                val timeStr = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(appointment.scheduledAt))
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    onClick = { onNavigateToStudent(appointment.studentId, studentName) }
-                ) {
-                    ListItem(
-                        headlineContent = { Text("$studentName ($timeStr)", fontWeight = FontWeight.Bold) },
-                        supportingContent = { Text("類型: ${appointment.type}") }, 
-                        trailingContent = { 
-                            Row {
-                                TextButton(onClick = { /* TODO mark done */ }) { Text("完成") }
-                                TextButton(onClick = { /* TODO mark missed */ }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("未赴約") }
-                            }
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                    )
+            if (todayAppointments.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("今日晤談 (${todayAppointments.size})", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                todayAppointments.forEach { appointment ->
+                    val studentName = studentsWithProfiles.find { it.student.studentId == appointment.studentId }?.student?.name ?: appointment.studentId
+                    val timeStr = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(appointment.scheduledAt))
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        onClick = { onNavigateToStudent(appointment.studentId, studentName) }
+                    ) {
+                        ListItem(
+                            headlineContent = { Text("$studentName ($timeStr)", fontWeight = FontWeight.Bold) },
+                            supportingContent = { Text("類型: ${appointment.type}") },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        )
+                    }
                 }
             }
-        } else {
-            Text("今日無預約", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
         }
-        
-        // Admin Actions
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = { viewModel.promoteAllStudents() },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("全體升級", fontSize = 12.sp)
-            }
+
+        // Admin/Demo Action
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
             OutlinedButton(
                 onClick = { 
                     if (studentsWithProfiles.isNotEmpty()) {
@@ -418,47 +379,234 @@ fun CounselingDashboard(
                         viewModel.scheduleAppointment(entry.student.studentId, System.currentTimeMillis() + 86400000)
                     }
                 },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Default.Edit, contentDescription = null)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("示範標記", fontSize = 12.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("示範資料標記 (測試用)")
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        val listTitle = if (searchQuery.isEmpty()) "重點追蹤與全體學生" else "搜尋結果 (${filteredEntries.size})"
-        Text(listTitle, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        
-        if (filteredEntries.isNotEmpty()) {
-            LazyColumn(
-                modifier = Modifier.weight(1f)
+        // Sticky Search & Filter
+        stickyHeader {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.background
             ) {
-                items(filteredEntries, key = { it.student.studentId }) { entry ->
-                    val semesterText = if (entry.student.currentSemester == 1) "上" else "下"
-                    DashboardActionCard(
-                        title = "${entry.student.name} (${entry.student.currentGrade}年$semesterText ${entry.student.currentClass}班)",
-                        description = "學號：${entry.student.studentId} | 狀態：${entry.profile?.status ?: "Active"} ${entry.profile?.legalStatus?.let {"($it)"} ?: ""}",
-                        actionText = "查看",
-                        onClick = { onNavigateToStudent(entry.student.studentId, entry.student.name) }
+                Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("搜尋姓名、學號、或狀態") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = if (searchQuery.isNotEmpty()) {
+                            { IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Clear, contentDescription = null) } }
+                        } else null,
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(selected = searchQuery == "", onClick = { searchQuery = "" }, label = { Text("全部") })
+                        FilterChip(selected = searchQuery == "High", onClick = { searchQuery = "High" }, label = { Text("高風險") })
+                        FilterChip(selected = searchQuery == "休學", onClick = { searchQuery = "休學" }, label = { Text("休學") })
+                        FilterChip(selected = searchQuery == "法院", onClick = { searchQuery = "法院" }, label = { Text("法院/監獄") })
+                    }
+                    
+                    HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+                }
+            }
+        }
+
+        // Student List
+        item {
+            val listTitle = if (searchQuery.isEmpty()) "重點追蹤與全體學生" else "搜尋結果 (${filteredEntries.size})"
+            Text(
+                text = listTitle,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 12.dp),
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        if (filteredEntries.isNotEmpty()) {
+            items(filteredEntries, key = { it.student.studentId }) { entry ->
+                val semesterText = if (entry.student.currentSemester == 1) "上" else "下"
+                DashboardActionCard(
+                    title = "${entry.student.name} (${entry.student.currentGrade}年$semesterText ${entry.student.currentClass}班)",
+                    description = "學號：${entry.student.studentId} | 狀態：${entry.profile?.status ?: "Active"} ${entry.profile?.legalStatus?.let {"($it)"} ?: ""}",
+                    actionText = "查看",
+                    onClick = { onNavigateToStudent(entry.student.studentId, entry.student.name) }
+                )
+            }
+        } else {
+            item {
+                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    Text(
+                        if (studentsWithProfiles.isEmpty()) "尚未匯入學生資料" else "找不到符合的學生",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-        } else {
-            Text(if (studentsWithProfiles.isEmpty()) "尚未匯入學生資料" else "找不到符合的學生", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp))
+        }
+        
+        item {
+            Spacer(modifier = Modifier.height(80.dp)) // Padding for bottom bar
         }
     }
 }
 
 @Composable
-fun SubjectClassSwitcher() {
+fun SubjectTeacherDashboard(
+    viewModel: SubjectTeacherViewModel = viewModel()
+) {
+    val context = LocalContext.current
+    val assignedClasses by viewModel.assignedClasses.collectAsState()
+    val selectedClassId by viewModel.selectedClassId.collectAsState()
+    val isImporting by viewModel.isImporting.collectAsState()
+    val selectedClass = assignedClasses.find { it.classId == selectedClassId }
+
+    val studentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { viewModel.importStudents(context, it) }
+    }
+    val schedulePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { viewModel.importSchedule(context, it) }
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp)
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("教學工作台", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.weight(1f))
+                if (isImporting) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                } else {
+                    Row {
+                        IconButton(onClick = { studentPicker.launch(arrayOf("*/*")) }) {
+                            Icon(Icons.Default.PersonAdd, contentDescription = "匯入學生", tint = MaterialTheme.colorScheme.primary)
+                        }
+                        IconButton(onClick = { schedulePicker.launch(arrayOf("*/*")) }) {
+                            Icon(Icons.Default.DateRange, contentDescription = "匯入課表", tint = MaterialTheme.colorScheme.secondary)
+                        }
+                        IconButton(onClick = { viewModel.clearAllData() }) {
+                            Icon(Icons.Default.Delete, contentDescription = "清空", tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // Horizontal Class Switcher (1-A)
+        if (assignedClasses.isNotEmpty()) {
+            item {
+                Text("授課班級視角", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    assignedClasses.forEach { sc ->
+                        FilterChip(
+                            selected = selectedClassId == sc.classId,
+                            onClick = { viewModel.selectClass(sc.classId) },
+                            label = { Text("${sc.classId} ${sc.subjectName}") }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        } else if (!isImporting) {
+            item {
+                Text("尚未匯入課表，請點擊上方日曆圖示進行匯入。", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+
+        // Current Course Card (1-B)
+        if (selectedClass != null) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.DateRange, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("即時課程狀態", fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("${selectedClass.classId} 班 - ${selectedClass.subjectName}", style = MaterialTheme.typography.titleMedium)
+                        Text("教室: ${selectedClass.roomNumber} | 學生: ${selectedClass.studentCount} 位")
+                        Text("下一堂課: ${selectedClass.nextLessonTime ?: "未排定"}", color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+        }
+
+        // Feature Shortcuts
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("教學捷徑", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        item {
+            DashboardActionCard(
+                title = "教案模板庫",
+                description = "對接 108 課綱核心素養",
+                actionText = "開啟",
+                onClick = { /* TODO Sprint 2 */ }
+            )
+        }
+
+        item {
+            DashboardActionCard(
+                title = "課堂表現快速標記",
+                description = "即時記錄學生發言、分組表現",
+                actionText = "進入記錄",
+                onClick = { /* TODO Sprint 1-C */ }
+            )
+        }
+        
+        item {
+            DashboardActionCard(
+                title = "作業派發",
+                description = "目前有 0 份作業待批改",
+                actionText = "管理",
+                onClick = { /* TODO Sprint 3 */ }
+            )
+        }
+    }
+}
+
+@Composable
+fun SubjectClassSwitcher(
+    viewModel: SubjectTeacherViewModel = viewModel()
+) {
+    val assignedClasses by viewModel.assignedClasses.collectAsState()
+
     Column(modifier = Modifier.padding(16.dp)) {
         Text("科任班級管理", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
-        ClassCard("101 班", "物理 (一)", "待批改作業: 2")
-        ClassCard("102 班", "物理 (一)", "今日有課 (14:10)")
-        ClassCard("205 班", "進階物理", "已完成進度: 75%")
+        
+        assignedClasses.forEach { sc ->
+            ClassCard(sc.classId, sc.subjectName, "下一堂課: ${sc.nextLessonTime}")
+        }
     }
 }
 
