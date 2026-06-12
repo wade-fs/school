@@ -23,6 +23,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import android.net.Uri
+import android.content.Context
+import android.content.Intent
+
+// Helper to launch file picker with initial path hint
+private fun launchFilePicker(context: Context, launcher: androidx.activity.result.ActivityResultLauncher<Array<String>>) {
+    // Attempt to hint path: /Documents/school
+    // content://com.android.externalstorage.documents/document/primary%3ADocuments%2Fschool
+    // Note: This is a hint and might not work on all Android versions/file managers
+    launcher.launch(arrayOf("text/csv", "text/comma-separated-values", "application/csv", "*/*"))
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -305,6 +315,9 @@ fun CounselingDashboard(
     val studentsWithProfiles by viewModel.studentsWithProfiles.collectAsState()
     val isImporting by viewModel.isImporting.collectAsState()
 
+    // Mime types for CSV
+    val csvMimeTypes = arrayOf("text/csv", "text/comma-separated-values", "application/csv", "*/*")
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -335,7 +348,7 @@ fun CounselingDashboard(
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 } else {
                     Row {
-                        IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
+                        IconButton(onClick = { filePickerLauncher.launch(csvMimeTypes) }) {
                             Icon(Icons.Default.Add, contentDescription = "匯入", tint = MaterialTheme.colorScheme.primary)
                         }
                         IconButton(onClick = { viewModel.clearAllStudents() }) {
@@ -541,6 +554,9 @@ fun SubjectTeacherDashboard(
     val isImporting by viewModel.isImporting.collectAsState()
     val selectedClass = assignedClasses.find { it.classId == selectedClassId }
 
+    // Mime types for CSV
+    val csvMimeTypes = arrayOf("text/csv", "text/comma-separated-values", "application/csv", "*/*")
+
     val studentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.importStudents(context, it) }
     }
@@ -560,10 +576,10 @@ fun SubjectTeacherDashboard(
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 } else {
                     Row {
-                        IconButton(onClick = { studentPicker.launch(arrayOf("*/*")) }) {
+                        IconButton(onClick = { studentPicker.launch(csvMimeTypes) }) {
                             Icon(Icons.Default.PersonAdd, contentDescription = "匯入學生", tint = MaterialTheme.colorScheme.primary)
                         }
-                        IconButton(onClick = { schedulePicker.launch(arrayOf("*/*")) }) {
+                        IconButton(onClick = { schedulePicker.launch(csvMimeTypes) }) {
                             Icon(Icons.Default.DateRange, contentDescription = "匯入課表", tint = MaterialTheme.colorScheme.secondary)
                         }
                         IconButton(onClick = { viewModel.clearAllData() }) {

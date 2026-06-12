@@ -122,6 +122,9 @@ fun SubmissionListScreen(
         uri?.let { viewModel.importGrades(assignment.id, context, it) }
     }
 
+    // Mime types for CSV
+    val csvMimeTypes = arrayOf("text/csv", "text/comma-separated-values", "application/csv", "*/*")
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -135,7 +138,7 @@ fun SubmissionListScreen(
                     if (isImporting) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
                     } else {
-                        IconButton(onClick = { gradePicker.launch(arrayOf("*/*")) }) {
+                        IconButton(onClick = { gradePicker.launch(csvMimeTypes) }) {
                             Icon(Icons.Default.UploadFile, contentDescription = "匯入成績")
                         }
                     }
