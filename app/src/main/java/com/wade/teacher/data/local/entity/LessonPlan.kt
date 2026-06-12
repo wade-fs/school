@@ -11,6 +11,7 @@ data class LessonPlan(
     val grade: Int,
     val competencies: String, // Comma separated tags for simplicity in prototype
     val content: String,
+    val prepNotes: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
 
