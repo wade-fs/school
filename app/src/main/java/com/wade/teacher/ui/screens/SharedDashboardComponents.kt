@@ -18,6 +18,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.graphics.Color
 
+import androidx.compose.foundation.verticalScroll
+
 @Composable
 fun WeeklyTimetableGrid(
     entries: List<com.wade.teacher.data.local.entity.TimetableEntry>,
@@ -26,49 +28,78 @@ fun WeeklyTimetableGrid(
     val days = listOf("一", "二", "三", "四", "五")
     val periodsToUse = if (periods.isNotEmpty()) periods else (1..8).map { com.wade.teacher.data.local.entity.PeriodTime(period = it, startTime = "", endTime = "") }
 
-    Column(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-        // Header Row
-        Row {
-            Box(modifier = Modifier.size(50.dp, 40.dp), contentAlignment = Alignment.Center) {
-                Text("節次", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            }
-            days.forEach { day ->
-                Box(modifier = Modifier.size(80.dp, 40.dp), contentAlignment = Alignment.Center) {
-                    Text(day, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                }
-            }
-        }
-        
-        periodsToUse.forEach { pt ->
+    // Use a Box with a max height to ensure it fits in the dialog and triggers scrolling
+    Box(modifier = Modifier.fillMaxWidth().heightIn(max = 450.dp)) {
+        Column(
+            modifier = Modifier
+                .horizontalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Header Row
             Row {
-                Box(modifier = Modifier.size(50.dp, 60.dp), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${pt.period}", fontWeight = FontWeight.Bold)
-                        if (pt.startTime.isNotEmpty()) {
-                            Text(pt.startTime, fontSize = 9.sp, color = Color.Gray)
-                        }
+                Box(modifier = Modifier.size(45.dp, 40.dp), contentAlignment = Alignment.Center) {
+                    Text("節次", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                }
+                days.forEach { day ->
+                    Box(modifier = Modifier.size(75.dp, 40.dp), contentAlignment = Alignment.Center) {
+                        Text(day, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                     }
                 }
-                
-                (1..5).forEach { dayIndex ->
-                    val entry = entries.find { it.dayOfWeek == dayIndex && it.period == pt.period }
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp, 60.dp)
-                            .padding(2.dp)
-                            .background(
-                                if (entry != null) MaterialTheme.colorScheme.primaryContainer 
-                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                MaterialTheme.shapes.extraSmall
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (entry != null) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(entry.subjectName, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                Text(entry.classId, fontSize = 10.sp)
-                                if (entry.roomNumber.isNotEmpty()) {
-                                    Text(entry.roomNumber, fontSize = 9.sp, color = MaterialTheme.colorScheme.primary)
+            }
+            
+            periodsToUse.forEach { pt ->
+                Row {
+                    Box(modifier = Modifier.size(45.dp, 60.dp), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("${pt.period}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            if (pt.startTime.isNotEmpty()) {
+                                Text(pt.startTime, fontSize = 8.sp, color = Color.Gray)
+                            }
+                        }
+                    }
+                    
+                    (1..5).forEach { dayIndex ->
+                        val entry = entries.find { it.dayOfWeek == dayIndex && it.period == pt.period }
+                        Box(
+                            modifier = Modifier
+                                .size(75.dp, 60.dp)
+                                .padding(2.dp)
+                                .background(
+                                    if (entry != null) MaterialTheme.colorScheme.primaryContainer 
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                    MaterialTheme.shapes.extraSmall
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (entry != null) {
+                                Column(
+                                    modifier = Modifier.padding(horizontal = 2.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(0.dp, Alignment.CenterVertically)
+                                ) {
+                                    Text(
+                                        text = entry.subjectName, 
+                                        fontSize = 10.sp, 
+                                        fontWeight = FontWeight.Bold, 
+                                        lineHeight = 12.sp,
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        text = entry.classId, 
+                                        fontSize = 9.sp, 
+                                        lineHeight = 11.sp,
+                                        maxLines = 1
+                                    )
+                                    if (entry.roomNumber.isNotEmpty()) {
+                                        Text(
+                                            text = entry.roomNumber, 
+                                            fontSize = 9.sp, 
+                                            color = MaterialTheme.colorScheme.primary, 
+                                            fontWeight = FontWeight.Medium,
+                                            lineHeight = 11.sp,
+                                            maxLines = 1
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -110,6 +141,7 @@ fun SubjectClassSwitcher(
 ) {
     // Correctly collect the Flow as State
     val assignedClasses by viewModel.assignedClasses.collectAsState(initial = emptyList())
+    val currentLesson by viewModel.currentLesson.collectAsState()
     val fullTimetable by viewModel.fullTimetable.collectAsState()
     val periodTimes by viewModel.periodTimes.collectAsState()
     var showGrid by remember { mutableStateOf(false) }
@@ -124,8 +156,13 @@ fun SubjectClassSwitcher(
         }
         Spacer(modifier = Modifier.height(12.dp))
         
-        assignedClasses.forEach { sc ->
-            ClassCard(sc.classId, sc.subjectName, "下一堂課: ${sc.nextLessonTime}")
+        assignedClasses.forEach { classId ->
+            val isCurrent = currentLesson?.classId == classId
+            ClassCard(
+                className = classId, 
+                subject = if (isCurrent) currentLesson?.subjectName ?: "" else "班級導覽", 
+                status = if (isCurrent) "🕒 正在上課..." else "點擊進入工作台"
+            )
         }
         
         if (showGrid) {

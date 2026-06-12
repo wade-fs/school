@@ -36,22 +36,54 @@ class SubjectTeacherViewModel(application: Application) : AndroidViewModel(appli
     private val _selectedClassId = MutableStateFlow<String?>(null)
     val selectedClassId: StateFlow<String?> = _selectedClassId.asStateFlow()
 
-    // Derived from TimetableEntries in DB
-    val assignedClasses: StateFlow<List<SubjectClassInfo>> = dao.getFullTimetable()
-        .map { entries ->
-            entries.groupBy { it.classId + it.subjectName }
-                .map { (_, group) ->
-                    val first = group.first()
-                    SubjectClassInfo(
-                        classId = first.classId,
-                        subjectName = first.subjectName,
-                        roomNumber = first.roomNumber,
-                        studentCount = 0, // Need to join with students count per class
-                        nextLessonTime = "星期${first.dayOfWeek} 第${first.period}節"
-                    )
-                }
-        }
+    // Simplified: Unique class IDs from timetable
+    val assignedClasses: StateFlow<List<String>> = dao.getFullTimetable()
+        .map { entries -> entries.map { it.classId }.distinct().sorted() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Real-time Lesson detection
+    val currentLesson: StateFlow<TimetableEntry?> = combine(dao.getFullTimetable(), dao.getPeriodTimes()) { entries, periods ->
+        if (entries.isEmpty()) return@combine null
+        
+        val calendar = java.util.Calendar.getInstance()
+        val dayOfWeek = when (calendar.get(java.util.Calendar.DAY_OF_WEEK)) {
+            java.util.Calendar.MONDAY -> 1
+            java.util.Calendar.TUESDAY -> 2
+            java.util.Calendar.WEDNESDAY -> 3
+            java.util.Calendar.THURSDAY -> 4
+            java.util.Calendar.FRIDAY -> 5
+            java.util.Calendar.SATURDAY -> 6
+            java.util.Calendar.SUNDAY -> 7
+            else -> 1
+        }
+        
+        val currentTimeStr = String.format("%02d:%02d", calendar.get(java.util.Calendar.HOUR_OF_DAY), calendar.get(java.util.Calendar.MINUTE))
+        
+        // 1. Check if a lesson is ongoing
+        val activePeriod = periods.find { it.startTime <= currentTimeStr && it.endTime >= currentTimeStr }
+        if (activePeriod != null) {
+            val ongoing = entries.find { it.dayOfWeek == dayOfWeek && it.period == activePeriod.period }
+            if (ongoing != null) return@combine ongoing
+        }
+        
+        // 2. If not ongoing, find the next lesson today
+        val nextToday = entries.filter { it.dayOfWeek == dayOfWeek }
+            .sortedBy { it.period }
+            .find { entry ->
+                val p = periods.find { it.period == entry.period }
+                p == null || p.startTime > currentTimeStr
+            }
+        if (nextToday != null) return@combine nextToday
+        
+        // 3. Find next lesson in coming days
+        for (i in 1..7) {
+            val nextDay = (dayOfWeek + i - 1) % 7 + 1
+            val firstOfNextDay = entries.filter { it.dayOfWeek == nextDay }.minByOrNull { it.period }
+            if (firstOfNextDay != null) return@combine firstOfNextDay
+        }
+        
+        entries.firstOrNull()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     // Raw timetable for grid view
     val fullTimetable: StateFlow<List<TimetableEntry>> = dao.getFullTimetable()
@@ -66,14 +98,8 @@ class SubjectTeacherViewModel(application: Application) : AndroidViewModel(appli
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
-        // Initial selection if empty
-        viewModelScope.launch {
-            assignedClasses.collect {
-                if (_selectedClassId.value == null && it.isNotEmpty()) {
-                    _selectedClassId.value = it.first().classId
-                }
-            }
-        }
+        // Initial selection: Real-time mode
+        _selectedClassId.value = "REAL_TIME"
     }
 
     fun selectClass(classId: String) {

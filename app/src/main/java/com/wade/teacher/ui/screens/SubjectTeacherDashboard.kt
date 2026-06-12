@@ -35,18 +35,21 @@ fun SubjectTeacherDashboard(
     android.util.Log.d("SubjectTeacherDashboard", "Composing SubjectTeacherDashboard")
     val context = LocalContext.current
     val assignedClasses by viewModel.assignedClasses.collectAsState()
+    val currentLesson by viewModel.currentLesson.collectAsState()
     val allClassIds by viewModel.allClassIds.collectAsState()
     val selectedClassId by viewModel.selectedClassId.collectAsState()
     val isImporting by viewModel.isImporting.collectAsState()
     val fullTimetable by viewModel.fullTimetable.collectAsState()
     val periodTimes by viewModel.periodTimes.collectAsState()
-    val selectedClass = assignedClasses.find { it.classId == selectedClassId }
 
     var showTimetableDialog by remember { mutableStateOf(false) }
 
-    // Observe students for selected class properly in the composable scope
-    val studentsInClass by remember(selectedClassId) {
-        viewModel.getStudentsInClass(selectedClassId ?: "")
+    // Determine which class we are actually looking at for the student list
+    val activeDisplayClassId = if (selectedClassId == "REAL_TIME") currentLesson?.classId else selectedClassId
+
+    // Observe students for the active display class
+    val studentsInClass by remember(activeDisplayClassId) {
+        viewModel.getStudentsInClass(activeDisplayClassId ?: "")
     }.collectAsState(initial = emptyList())
 
     // Mime types for CSV
@@ -60,11 +63,11 @@ fun SubjectTeacherDashboard(
     }
 
     // Move classChips calculation OUTSIDE LazyColumn as requested
-    val classChips: List<Pair<String, String>> =
-        if (assignedClasses.isNotEmpty())
-            assignedClasses.map { it.classId to "${it.classId} ${it.subjectName}" }
-        else
-            allClassIds.map { it to it }
+    // Simplified: "Real-time" chip + list of class IDs
+    val classChips: List<Pair<String, String>> = remember(assignedClasses, allClassIds) {
+        val base = if (assignedClasses.isNotEmpty()) assignedClasses else allClassIds
+        listOf("REAL_TIME" to "🕒 即時") + base.map { it to it }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -97,7 +100,7 @@ fun SubjectTeacherDashboard(
         }
 
         // Horizontal Class Switcher (1-A)
-        if (classChips.isNotEmpty()) {
+        if (classChips.size > 1) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("授課班級視角", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
@@ -132,44 +135,53 @@ fun SubjectTeacherDashboard(
             }
         }
 
-        // Current Course Card (1-B)
-        if (selectedClass != null) {
-            item {
+        // Current Course Card (1-B) - True Real-time
+        item {
+            val displayEntry = currentLesson
+            
+            if (displayEntry != null) {
+                val isRealTimeSelected = selectedClassId == "REAL_TIME"
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isRealTimeSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.DateRange, contentDescription = null)
+                            Icon(if (isRealTimeSelected) Icons.Default.PlayArrow else Icons.Default.Info, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("即時課程狀態", fontWeight = FontWeight.Bold)
+                            Text(if (isRealTimeSelected) "即時課程狀態" else "系統目前定位", fontWeight = FontWeight.Bold)
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("${selectedClass.classId} 班 - ${selectedClass.subjectName}", style = MaterialTheme.typography.titleMedium)
-                        Text("教室: ${selectedClass.roomNumber} | 學生: ${selectedClass.studentCount} 位")
-                        Text("下一堂課: ${selectedClass.nextLessonTime ?: "未排定"}", color = MaterialTheme.colorScheme.primary)
-                        
-                        // New: Small preview of class schedule
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text("本班授課節次:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                        val classSchedule = fullTimetable.filter { it.classId == selectedClass.classId }
-                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            classSchedule.forEach { entry ->
-                                SuggestionChip(
-                                    onClick = { },
-                                    label = { Text("週${entry.dayOfWeek} 第${entry.period}節", fontSize = 10.sp) }
-                                )
-                            }
-                        }
+                        Text("${displayEntry.classId} 班 - ${displayEntry.subjectName}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("教室: ${displayEntry.roomNumber}")
+                        Text("時間: 週${displayEntry.dayOfWeek} 第${displayEntry.period}節", color = MaterialTheme.colorScheme.primary)
                     }
                 }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // Show class schedule summary if a specific class is selected
+        if (selectedClassId != null && selectedClassId != "REAL_TIME") {
+            item {
+                Text("${selectedClassId} 班授課時段:", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                val classSchedule = fullTimetable.filter { it.classId == selectedClassId }
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    classSchedule.forEach { entry ->
+                        SuggestionChip(
+                            onClick = { },
+                            label = { Text("週${entry.dayOfWeek} 第${entry.period}節", fontSize = 10.sp) }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
 
         // Feature Shortcuts
         item {
-            Spacer(modifier = Modifier.height(16.dp))
             Text("教學捷徑", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -179,33 +191,41 @@ fun SubjectTeacherDashboard(
         }
 
         item {
-            DashboardActionCard("課堂表現快速標記", "即時記錄學生發言、分組表現", "進入記錄", { selectedClassId?.let { onNavigateToTagging(it) } })
+            DashboardActionCard("課堂表現快速標記", "即時記錄學生發言、分組表現", "進入記錄", { activeDisplayClassId?.let { onNavigateToTagging(it) } })
         }
         
         item {
-            DashboardActionCard("作業派發", "管理作業截止日期與批改進度", "管理", { selectedClassId?.let { onNavigateToAssignments(it) } })
+            DashboardActionCard("作業派發", "管理作業截止日期與批改進度", "管理", { activeDisplayClassId?.let { onNavigateToAssignments(it) } })
         }
 
         item {
-            DashboardActionCard("學習成效分析", "班級成績分佈與個別學習曲線", "查看分析", { selectedClassId?.let { onNavigateToAnalysis(it) } })
+            DashboardActionCard("學習成效分析", "班級成績分佈與個別學習曲線", "查看分析", { activeDisplayClassId?.let { onNavigateToAnalysis(it) } })
         }
 
         // --- Student List Display ---
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("班級學生清單", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
-        }
+        if (activeDisplayClassId != null) {
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("${activeDisplayClassId} 班級學生清單", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
 
-        items(studentsInClass) { student ->
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                ListItem(
-                    headlineContent = { Text("${student.seatNo}號 - ${student.name}") },
-                    supportingContent = { Text("學號: ${student.studentId}") }
-                )
+            if (studentsInClass.isEmpty()) {
+                item {
+                    Text("此班級尚無學生資料。", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                }
+            }
+
+            items(studentsInClass) { student ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    ListItem(
+                        headlineContent = { Text("${student.seatNo}號 - ${student.name}") },
+                        supportingContent = { Text("學號: ${student.studentId}") }
+                    )
+                }
             }
         }
         
