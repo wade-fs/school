@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalLayoutApi::class)
 package com.wade.teacher.ui.screens
 
 import androidx.compose.foundation.clickable
@@ -19,7 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wade.teacher.data.local.entity.Student
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClassroomTaggingScreen(
     classId: String,
@@ -138,9 +139,6 @@ fun FlowRow(
     crossAxisSpacing: androidx.compose.ui.unit.Dp,
     content: @Composable () -> Unit
 ) {
-    // Basic implementation using Box/Row or flow layout library would be better, 
-    // but for prototype let's use a simple Column + Row wrapper if needed or just use Row for now.
-    // Compose 1.7+ has FlowRow, but let's stick to simple layout for compatibility.
     androidx.compose.foundation.layout.FlowRow(
         horizontalArrangement = Arrangement.spacedBy(mainAxisSpacing),
         verticalArrangement = Arrangement.spacedBy(crossAxisSpacing)
