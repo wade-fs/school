@@ -189,6 +189,76 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun getResponsesForSession(sessionId: Int) = dao.getResponsesForSession(sessionId)
 
+    // --- Sprint 3: Crisis Events ---
+
+    fun reportCrisisEvent(
+        studentId: String,
+        eventType: String,
+        severity: String,
+        actionTaken: String,
+        occurredAt: Long = System.currentTimeMillis(),
+        reportedBy: String,
+        notifiedParent: Boolean = false,
+        notifiedPrincipal: Boolean = false,
+        referralUnit: String? = null
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertCrisisEvent(
+                CrisisEvent(
+                    studentId = studentId,
+                    eventType = eventType,
+                    occurredAt = occurredAt,
+                    reportedBy = reportedBy,
+                    severity = severity,
+                    actionTaken = actionTaken,
+                    notifiedParent = notifiedParent,
+                    notifiedPrincipal = notifiedPrincipal,
+                    externalReferral = referralUnit != null,
+                    referralUnit = referralUnit
+                )
+            )
+            // 高嚴重性事件 → 自動將學生風險等級設為 High
+            if (severity == "緊急") {
+                val profile = dao.getProfileForStudent(studentId).first() ?: CounselingProfile(studentId)
+                dao.upsertProfile(profile.copy(priority = "High"))
+            }
+        }
+    }
+
+    fun getCrisisEventsForStudent(studentId: String): Flow<List<CrisisEvent>> =
+        dao.getCrisisEventsForStudent(studentId)
+
+    // --- Sprint 4: Counselor-Teacher Notes ---
+
+    fun sendNoteToTeacher(
+        studentId: String,
+        fromCounselorId: String,
+        toTeacherId: String,
+        summary: String,
+        requestType: String
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertCounselorNote(
+                CounselorTeacherNote(
+                    studentId = studentId,
+                    fromCounselorId = fromCounselorId,
+                    toTeacherId = toTeacherId,
+                    summary = summary,
+                    requestType = requestType
+                )
+            )
+        }
+    }
+
+    fun getNotesForStudent(studentId: String): Flow<List<CounselorTeacherNote>> =
+        dao.getNotesForStudent(studentId)
+
+    fun markNoteAsRead(noteId: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.markNoteAsRead(noteId)
+        }
+    }
+
     fun getClassMoodAlerts(classId: String): Flow<List<String>> = dao.getLatestSessions(classId, 2).map { sessions ->
         if (sessions.isEmpty()) return@map emptyList<String>()
         

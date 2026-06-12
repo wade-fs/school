@@ -69,6 +69,19 @@ interface CounselorDao {
     @Query("SELECT * FROM crisis_events WHERE studentId = :studentId ORDER BY occurredAt DESC")
     fun getCrisisEventsForStudent(studentId: String): Flow<List<CrisisEvent>>
 
+    // Counselor-Teacher Notes
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCounselorNote(note: CounselorTeacherNote)
+
+    @Query("SELECT * FROM counselor_teacher_notes WHERE toTeacherId = :teacherId AND isRead = 0")
+    fun getUnreadNotesForTeacher(teacherId: String): Flow<List<CounselorTeacherNote>>
+
+    @Query("SELECT * FROM counselor_teacher_notes WHERE studentId = :studentId ORDER BY createdAt DESC")
+    fun getNotesForStudent(studentId: String): Flow<List<CounselorTeacherNote>>
+
+    @Query("UPDATE counselor_teacher_notes SET isRead = 1 WHERE id = :id")
+    suspend fun markNoteAsRead(id: Int)
+
     // Mood Checks
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMoodCheckSession(session: MoodCheckSession): Long

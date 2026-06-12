@@ -166,72 +166,22 @@ Entity 和 DAO 都已就緒，已完成 UI 和 ViewModel 方法。
 
 ---
 
-### Sprint 3 — 危機事件記錄（約 3～5 天）
+### Sprint 3 — 危機事件記錄 (✅ 完整)
 
 Entity（`CrisisEvent`）和 DAO 已就緒。
 
-#### 3-A：ViewModel 新增方法
+#### 3-A：ViewModel 新增方法 (✅)
 
 ```kotlin
-fun reportCrisisEvent(
-    studentId: String,
-    eventType: String,
-    severity: String,
-    actionTaken: String,
-    occurredAt: Long = System.currentTimeMillis(),
-    reportedBy: String,
-    notifiedParent: Boolean = false,
-    notifiedPrincipal: Boolean = false,
-    referralUnit: String? = null
-) {
-    viewModelScope.launch(Dispatchers.IO) {
-        dao.insertCrisisEvent(
-            CrisisEvent(
-                studentId = studentId,
-                eventType = eventType,
-                occurredAt = occurredAt,
-                reportedBy = reportedBy,
-                severity = severity,
-                actionTaken = actionTaken,
-                notifiedParent = notifiedParent,
-                notifiedPrincipal = notifiedPrincipal,
-                externalReferral = referralUnit != null,
-                referralUnit = referralUnit
-            )
-        )
-        // 高嚴重性事件 → 自動將學生風險等級設為 High
-        if (severity == "緊急") setStudentStatus(studentId, "Active", null, "High")
-    }
-}
-
-fun getCrisisEventsForStudent(studentId: String): Flow<List<CrisisEvent>> =
-    dao.getCrisisEventsForStudent(studentId)
+fun reportCrisisEvent(...)
+fun getCrisisEventsForStudent(...)
 ```
 
-#### 3-B：UI 規劃
+#### 3-B：UI 規劃 (✅)
 
-**入口**：`StudentDetailScreen` 頂部 Card 新增「⚠ 通報危機事件」按鈕（紅色）
-
-**表單 `CrisisReportSheet`**（BottomSheet 或獨立頁）：
-```
-事件類型（Chip 多選）：
-  自傷、自殺意念、霸凌（施）、霸凌（受）、家暴通報、其他
-
-嚴重程度（RadioButton）：
-  緊急、嚴重、一般
-
-事件描述（OutlinedTextField，多行）
-
-已採取行動（OutlinedTextField）
-
-已通知家長 ☐ / 已通知校長 ☐
-
-外部轉介（Toggle）→ 展開填寫機構名稱
-
-[送出通報]
-```
-
-**歷史事件顯示**：`StudentDetailScreen` 歷史紀錄區塊下方新增「危機事件記錄」子區塊，依時間倒序列出，顯示事件類型 + 嚴重程度標籤 + 是否已轉介。
+- `StudentDetailScreen` 新增「⚠ 通報危機事件」按鈕
+- `CrisisReportDialog`: 事件類型、嚴重程度、描述、行動、通知與轉介
+- 歷史事件顯示: `CrisisEventItem` 列出事件類型與詳情
 
 ---
 

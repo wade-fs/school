@@ -26,6 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wade.teacher.data.local.entity.CaseLog
+import com.wade.teacher.data.local.entity.CrisisEvent
+import com.wade.teacher.data.local.entity.CounselorTeacherNote
 import com.wade.teacher.data.local.entity.StudentWithProfile
 import java.text.SimpleDateFormat
 import java.util.*
@@ -45,6 +47,8 @@ fun StudentDetailScreen(
     val studentWithProfile by viewModel.studentsWithProfiles.collectAsState()
     val currentEntry = studentWithProfile.find { it.student.studentId == studentId }
     val logs by viewModel.getLogsForStudent(studentId).collectAsState(initial = emptyList())
+    val crisisEvents by viewModel.getCrisisEventsForStudent(studentId).collectAsState(initial = emptyList())
+    val teacherNotes by viewModel.getNotesForStudent(studentId).collectAsState(initial = emptyList())
 
     var showStatusDialog by remember { mutableStateOf(false) }
     var editStatus by remember { mutableStateOf("Active") }
@@ -53,6 +57,19 @@ fun StudentDetailScreen(
 
     var showScheduleDialog by remember { mutableStateOf(false) }
     var scheduleType by remember { mutableStateOf("初談") }
+
+    var showCrisisDialog by remember { mutableStateOf(false) }
+    var crisisType by remember { mutableStateOf("其他") }
+    var crisisSeverity by remember { mutableStateOf("一般") }
+    var crisisDescription by remember { mutableStateOf("") }
+    var crisisAction by remember { mutableStateOf("") }
+    var crisisNotifiedParent by remember { mutableStateOf(false) }
+    var crisisNotifiedPrincipal by remember { mutableStateOf(false) }
+    var crisisReferralUnit by remember { mutableStateOf("") }
+
+    var showNoteDialog by remember { mutableStateOf(false) }
+    var noteRequestType by remember { mutableStateOf("請多關心") }
+    var noteSummary by remember { mutableStateOf("") }
 
     LaunchedEffect(currentEntry) {
         if (currentEntry != null) {
@@ -121,6 +138,112 @@ fun StudentDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showStatusDialog = false }) { Text("取消") }
+            }
+        )
+    }
+
+    if (showCrisisDialog) {
+        AlertDialog(
+            onDismissRequest = { showCrisisDialog = false },
+            title = { Text("⚠ 通報危機事件", color = MaterialTheme.colorScheme.error) },
+            text = {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    item {
+                        val typeOptions = listOf("自傷", "自殺意念", "霸凌", "家暴通報", "其他")
+                        Text("事件類型", style = MaterialTheme.typography.labelSmall)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            typeOptions.take(3).forEach { type ->
+                                FilterChip(
+                                    selected = crisisType == type,
+                                    onClick = { crisisType = type },
+                                    label = { Text(type, fontSize = 10.sp) }
+                                )
+                            }
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            typeOptions.drop(3).forEach { type ->
+                                FilterChip(
+                                    selected = crisisType == type,
+                                    onClick = { crisisType = type },
+                                    label = { Text(type, fontSize = 10.sp) }
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        Text("嚴重程度", style = MaterialTheme.typography.labelSmall)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            listOf("緊急", "嚴重", "一般").forEach { s ->
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { crisisSeverity = s }) {
+                                    RadioButton(selected = crisisSeverity == s, onClick = { crisisSeverity = s })
+                                    Text(s, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = crisisDescription,
+                            onValueChange = { crisisDescription = it },
+                            label = { Text("事件描述") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 2
+                        )
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = crisisAction,
+                            onValueChange = { crisisAction = it },
+                            label = { Text("已採取行動") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = crisisNotifiedParent, onCheckedChange = { crisisNotifiedParent = it })
+                            Text("已通知家長", style = MaterialTheme.typography.bodySmall)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Checkbox(checked = crisisNotifiedPrincipal, onCheckedChange = { crisisNotifiedPrincipal = it })
+                            Text("已通知校長", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = crisisReferralUnit,
+                            onValueChange = { crisisReferralUnit = it },
+                            label = { Text("外部轉介機構 (選填)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("若無則留空") }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.reportCrisisEvent(
+                            studentId = studentId,
+                            eventType = crisisType,
+                            severity = crisisSeverity,
+                            actionTaken = crisisAction,
+                            reportedBy = "Current Counselor", // Simplified
+                            notifiedParent = crisisNotifiedParent,
+                            notifiedPrincipal = crisisNotifiedPrincipal,
+                            referralUnit = if (crisisReferralUnit.isBlank()) null else crisisReferralUnit
+                        )
+                        showCrisisDialog = false
+                        Toast.makeText(context, "危機事件已記錄", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("送出通報") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCrisisDialog = false }) { Text("取消") }
             }
         )
     }
@@ -302,6 +425,17 @@ fun StudentDetailScreen(
                                 Text("新增預約")
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { showCrisisDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("⚠ 通報危機事件")
+                        }
                     }
                 }
                 
@@ -332,6 +466,41 @@ fun StudentDetailScreen(
                 items(logs) { log ->
                     LogItem(log, viewModel)
                 }
+            }
+
+            if (crisisEvents.isNotEmpty()) {
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text("危機事件記錄", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                items(crisisEvents) { event ->
+                    CrisisEventItem(event)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CrisisEventItem(event: CrisisEvent) {
+    val date = Date(event.occurredAt)
+    val format = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault())
+    
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(text = event.eventType, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                Text(text = format.format(date), style = MaterialTheme.typography.labelSmall)
+            }
+            Text(text = "嚴重度: ${event.severity}", style = MaterialTheme.typography.labelSmall)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = event.actionTaken, style = MaterialTheme.typography.bodySmall)
+            if (event.externalReferral || !event.referralUnit.isNullOrBlank()) {
+                Text(text = "已轉介: ${event.referralUnit ?: "外部單位"}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
             }
         }
     }
