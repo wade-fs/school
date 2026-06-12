@@ -312,6 +312,22 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun getBulletins(classId: String): Flow<List<ClassBulletin>> = dao.getBulletinsForClass(classId)
 
+    // ── 聯絡簿 ──────────────────────────────────────────────────────────────
+    fun saveContactBookEntry(entry: ContactBookEntry) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertContactBook(entry)
+        }
+    }
+
+    fun getTodayContactBook(classId: String): Flow<ContactBookEntry?> {
+        val calendar = java.util.Calendar.getInstance()
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        calendar.set(java.util.Calendar.MINUTE, 0)
+        calendar.set(java.util.Calendar.SECOND, 0)
+        calendar.set(java.util.Calendar.MILLISECOND, 0)
+        return dao.getContactBookForDate(classId, calendar.timeInMillis)
+    }
+
     companion object {
         fun defaultPeriodTimes(): List<PeriodTime> = listOf(
             PeriodTime(period = 0, startTime = "07:30", endTime = "08:10"),

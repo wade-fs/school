@@ -196,4 +196,11 @@ interface CounselorDao {
 
     @Query("SELECT * FROM class_bulletins WHERE classId = :classId ORDER BY timestamp DESC")
     fun getBulletinsForClass(classId: String): Flow<List<ClassBulletin>>
+
+    // ── Contact Book ──────────────────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertContactBook(entry: ContactBookEntry)
+
+    @Query("SELECT * FROM contact_book WHERE classId = :classId AND date = :date LIMIT 1")
+    fun getContactBookForDate(classId: String, date: Long): Flow<ContactBookEntry?>
 }

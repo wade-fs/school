@@ -102,6 +102,7 @@ dependencies {
     ksp("androidx.room:room-compiler:$roomVersion")
     
     implementation("io.ktor:ktor-client-android:2.3.11")
+    implementation("com.google.code.gson:gson:2.10.1")
     
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

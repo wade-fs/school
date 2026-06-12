@@ -30,9 +30,10 @@ import com.wade.teacher.data.local.entity.*
         ClassroomPerformance::class,
         PeriodTime::class,
         AttendanceRecord::class,
-        ClassBulletin::class
+        ClassBulletin::class,
+        ContactBookEntry::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
