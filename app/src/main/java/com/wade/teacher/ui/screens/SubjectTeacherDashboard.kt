@@ -62,7 +62,6 @@ fun SubjectTeacherDashboard(
         uri?.let { viewModel.importSchedule(context, it) }
     }
 
-    // Move classChips calculation OUTSIDE LazyColumn as requested
     // Simplified: "Real-time" chip + list of class IDs
     val classChips: List<Pair<String, String>> = remember(assignedClasses, allClassIds) {
         val base = if (assignedClasses.isNotEmpty()) assignedClasses else allClassIds
@@ -71,10 +70,13 @@ fun SubjectTeacherDashboard(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp)
+        contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text("教學工作台", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.weight(1f))
                 if (isImporting) {
@@ -96,135 +98,153 @@ fun SubjectTeacherDashboard(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // Horizontal Class Switcher (1-A)
-        if (classChips.size > 1) {
-            item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("授課班級視角", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.weight(1f))
-                    TextButton(onClick = { showTimetableDialog = true }) {
-                        Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("查看完整週課表", fontSize = 12.sp)
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    classChips.forEach { (id, label) ->
-                        FilterChip(
-                            selected = selectedClassId == id,
-                            onClick = { viewModel.selectClass(id) },
-                            label = { Text(label) }
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        } else if (!isImporting) {
-            item {
-                Text("尚未匯入課表，請點擊上方日曆圖示進行匯入。", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
-
-        // Current Course Card (1-B) - True Real-time
-        item {
-            val displayEntry = currentLesson
-            
-            if (displayEntry != null) {
-                val isRealTimeSelected = selectedClassId == "REAL_TIME"
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isRealTimeSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(if (isRealTimeSelected) Icons.Default.PlayArrow else Icons.Default.Info, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(if (isRealTimeSelected) "即時課程狀態" else "系統目前定位", fontWeight = FontWeight.Bold)
+        // Pinned Header: Current Course Card and Class Switcher
+        stickyHeader {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                tonalElevation = 2.dp,
+                shadowElevation = 2.dp
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    // Current Course Card (Pinned)
+                    if (currentLesson != null) {
+                        val isRealTimeSelected = selectedClassId == "REAL_TIME"
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isRealTimeSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        if (isRealTimeSelected) Icons.Default.PlayArrow else Icons.Default.Info, 
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        if (isRealTimeSelected) "即時課程狀態" else "系統目前定位", 
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text("${currentLesson?.classId} 班 - ${currentLesson?.subjectName}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                        Text("教室: ${currentLesson?.roomNumber}", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    Text("週${currentLesson?.dayOfWeek} 第${currentLesson?.period}節", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("${displayEntry.classId} 班 - ${displayEntry.subjectName}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("教室: ${displayEntry.roomNumber}")
-                        Text("時間: 週${displayEntry.dayOfWeek} 第${displayEntry.period}節", color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Horizontal Class Switcher (Pinned below card)
+                    if (classChips.size > 1) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            classChips.forEach { (id, label) ->
+                                FilterChip(
+                                    selected = selectedClassId == id,
+                                    onClick = { viewModel.selectClass(id) },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Show class schedule summary if a specific class is selected
-        if (selectedClassId != null && selectedClassId != "REAL_TIME") {
-            item {
-                Text("${selectedClassId} 班授課時段:", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                val classSchedule = fullTimetable.filter { it.classId == selectedClassId }
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    classSchedule.forEach { entry ->
-                        SuggestionChip(
-                            onClick = { },
-                            label = { Text("週${entry.dayOfWeek} 第${entry.period}節", fontSize = 10.sp) }
-                        )
+        // Scrollable Content
+        item {
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Show class schedule summary if a specific class is selected
+                if (selectedClassId != null && selectedClassId != "REAL_TIME") {
+                    Text("${selectedClassId} 班授課時段:", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    val classSchedule = fullTimetable.filter { it.classId == selectedClassId }
+                    Row(modifier = Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        classSchedule.forEach { entry ->
+                            SuggestionChip(
+                                onClick = { },
+                                label = { Text("週${entry.dayOfWeek} 第${entry.period}節", fontSize = 10.sp) }
+                            )
+                        }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
+
+                Text("教學捷徑", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
 
-        // Feature Shortcuts
         item {
-            Text("教學捷徑", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                DashboardActionCard("教案模板庫", "對接 108 課綱核心素養", "開啟", onNavigateToLessonPlans)
+            }
         }
 
         item {
-            DashboardActionCard("教案模板庫", "對接 108 課綱核心素養", "開啟", onNavigateToLessonPlans)
-        }
-
-        item {
-            DashboardActionCard("課堂表現快速標記", "即時記錄學生發言、分組表現", "進入記錄", { activeDisplayClassId?.let { onNavigateToTagging(it) } })
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                DashboardActionCard("課堂表現快速標記", "即時記錄學生發言、分組表現", "進入記錄", { activeDisplayClassId?.let { onNavigateToTagging(it) } })
+            }
         }
         
         item {
-            DashboardActionCard("作業派發", "管理作業截止日期與批改進度", "管理", { activeDisplayClassId?.let { onNavigateToAssignments(it) } })
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                DashboardActionCard("作業派發", "管理作業截止日期與批改進度", "管理", { activeDisplayClassId?.let { onNavigateToAssignments(it) } })
+            }
         }
 
         item {
-            DashboardActionCard("學習成效分析", "班級成績分佈與個別學習曲線", "查看分析", { activeDisplayClassId?.let { onNavigateToAnalysis(it) } })
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                DashboardActionCard("學習成效分析", "班級成績分佈與個別學習曲線", "查看分析", { activeDisplayClassId?.let { onNavigateToAnalysis(it) } })
+            }
         }
 
         // --- Student List Display ---
         if (activeDisplayClassId != null) {
             item {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("${activeDisplayClassId} 班級學生清單", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(8.dp))
+                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("${activeDisplayClassId} 班級學生清單", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
 
             if (studentsInClass.isEmpty()) {
                 item {
-                    Text("此班級尚無學生資料。", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    Text("此班級尚無學生資料。", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                 }
             }
 
             items(studentsInClass) { student ->
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    ListItem(
-                        headlineContent = { Text("${student.seatNo}號 - ${student.name}") },
-                        supportingContent = { Text("學號: ${student.studentId}") }
-                    )
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        ListItem(
+                            headlineContent = { Text("${student.seatNo}號 - ${student.name}") },
+                            supportingContent = { Text("學號: ${student.studentId}") }
+                        )
+                    }
                 }
             }
         }
