@@ -31,7 +31,9 @@ fun DashboardScreen(
     onBack: () -> Unit, 
     onNavigateToStudent: (String, String) -> Unit = { _, _ -> },
     onNavigateToMoodCheck: () -> Unit = {},
-    onNavigateToResources: () -> Unit = {}
+    onNavigateToResources: () -> Unit = {},
+    onNavigateToLessonPlans: () -> Unit = {},
+    onNavigateToTagging: (String) -> Unit = {}
 ) {
     val viewModel: CounselorViewModel = viewModel()
     val schoolConfig by viewModel.schoolConfig.collectAsState()
@@ -42,14 +44,17 @@ fun DashboardScreen(
     if (showSettingsDialog) {
         val moeSchools by viewModel.moeSchools.collectAsState()
         val isFetching by viewModel.isFetchingSchools.collectAsState()
+        val periodTimes by viewModel.periodTimes.collectAsState(initial = emptyList())
         
         SchoolSettingsDialog(
             config = schoolConfig,
             moeSchools = moeSchools,
             isFetching = isFetching,
+            periodTimes = periodTimes,
             onDismiss = { showSettingsDialog = false },
-            onSave = { name, type, website ->
+            onSave = { name, type, website, times ->
                 viewModel.updateSchoolConfig(name, type, website)
+                viewModel.updatePeriodTimes(times)
                 showSettingsDialog = false
             }
         )
@@ -121,7 +126,10 @@ fun DashboardScreen(
                 0 -> {
                     when (role) {
                         "counseling" -> CounselingDashboard(onNavigateToStudent, onNavigateToMoodCheck, onNavigateToResources, viewModel)
-                        "subject" -> SubjectTeacherDashboard()
+                        "subject" -> SubjectTeacherDashboard(
+                            onNavigateToLessonPlans = onNavigateToLessonPlans,
+                            onNavigateToTagging = onNavigateToTagging
+                        )
                         else -> RoleFeatureContent(role = role)
                     }
                 }
@@ -137,13 +145,17 @@ fun SchoolSettingsDialog(
     config: com.wade.teacher.data.local.entity.SchoolConfig,
     moeSchools: List<MoeSchool>,
     isFetching: Boolean,
+    periodTimes: List<com.wade.teacher.data.local.entity.PeriodTime>,
     onDismiss: () -> Unit,
-    onSave: (String, com.wade.teacher.data.local.entity.SchoolType, String?) -> Unit
+    onSave: (String, com.wade.teacher.data.local.entity.SchoolType, String?, List<com.wade.teacher.data.local.entity.PeriodTime>) -> Unit
 ) {
     var name by remember { mutableStateOf(config.schoolName) }
     var selectedType by remember { mutableStateOf(config.schoolType) }
     var website by remember { mutableStateOf(config.schoolWebsite) }
     var searchQuery by remember { mutableStateOf("") }
+    
+    // Period times local state
+    var editablePeriodTimes by remember(periodTimes) { mutableStateOf(periodTimes) }
 
     val filteredSchools = if (searchQuery.length >= 2) {
         moeSchools.filter { it.name.contains(searchQuery) }
@@ -153,72 +165,119 @@ fun SchoolSettingsDialog(
         onDismissRequest = onDismiss,
         title = { Text("全校性設定") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("校名") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("校名") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 
-                if (website != null) {
-                    Text("網站: $website", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                item {
+                    if (website != null) {
+                        Text("網站: $website", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("快速從教育部名單挑選 (輸入關鍵字):", style = MaterialTheme.typography.labelMedium)
+                    
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        label = { Text("搜尋學校") },
+                        modifier = Modifier.fillMaxWidth(),
+                        trailingIcon = {
+                            if (isFetching) CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                        }
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("快速從教育部名單挑選 (輸入關鍵字):", style = MaterialTheme.typography.labelMedium)
-                
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    label = { Text("搜尋學校") },
-                    modifier = Modifier.fillMaxWidth(),
-                    trailingIcon = {
-                        if (isFetching) CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                    }
-                )
-
                 if (filteredSchools.isNotEmpty()) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 150.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        LazyColumn {
-                            items(filteredSchools) { school ->
-                                ListItem(
-                                    headlineContent = { Text(school.name, fontSize = 14.sp) },
-                                    supportingContent = { Text(school.city, fontSize = 12.sp) },
-                                    modifier = Modifier.clickable {
-                                        name = school.name
-                                        website = school.website
-                                        searchQuery = ""
-                                    }
-                                )
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 150.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            LazyColumn {
+                                items(filteredSchools) { school ->
+                                    ListItem(
+                                        headlineContent = { Text(school.name, fontSize = 14.sp) },
+                                        supportingContent = { Text(school.city, fontSize = 12.sp) },
+                                        modifier = Modifier.clickable {
+                                            name = school.name
+                                            website = school.website
+                                            searchQuery = ""
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
                 }
                 
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("學校類型", style = MaterialTheme.typography.labelLarge)
-                com.wade.teacher.data.local.entity.SchoolType.values().forEach { type ->
-                    val label = when (type) {
-                        com.wade.teacher.data.local.entity.SchoolType.JUNIOR_HIGH -> "國中 (7-9年級)"
-                        com.wade.teacher.data.local.entity.SchoolType.SENIOR_HIGH -> "高中 (10-12年級)"
-                        com.wade.teacher.data.local.entity.SchoolType.COMPREHENSIVE -> "綜合高中 (7-12年級)"
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("學校類型", style = MaterialTheme.typography.labelLarge)
+                    com.wade.teacher.data.local.entity.SchoolType.values().forEach { type ->
+                        val label = when (type) {
+                            com.wade.teacher.data.local.entity.SchoolType.JUNIOR_HIGH -> "國中 (7-9年級)"
+                            com.wade.teacher.data.local.entity.SchoolType.SENIOR_HIGH -> "高中 (10-12年級)"
+                            com.wade.teacher.data.local.entity.SchoolType.COMPREHENSIVE -> "綜合高中 (7-12年級)"
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().clickable { selectedType = type }
+                        ) {
+                            RadioButton(selected = selectedType == type, onClick = { selectedType = type })
+                            Text(label)
+                        }
                     }
+                }
+
+                item {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    Text("作息時間設定 (節次時間)", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                items(editablePeriodTimes.size) { index ->
+                    val pt = editablePeriodTimes[index]
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { selectedType = type }
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        RadioButton(selected = selectedType == type, onClick = { selectedType = type })
-                        Text(label)
+                        Text("第 ${pt.period} 節", modifier = Modifier.width(50.dp), fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = pt.startTime,
+                            onValueChange = { newStart ->
+                                editablePeriodTimes = editablePeriodTimes.toMutableList().apply {
+                                    this[index] = pt.copy(startTime = newStart)
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            label = { Text("開始") },
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = pt.endTime,
+                            onValueChange = { newEnd ->
+                                editablePeriodTimes = editablePeriodTimes.toMutableList().apply {
+                                    this[index] = pt.copy(endTime = newEnd)
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            label = { Text("結束") },
+                            singleLine = true
+                        )
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(name, selectedType, website) }) {
+            TextButton(onClick = { onSave(name, selectedType, website, editablePeriodTimes) }) {
                 Text("儲存")
             }
         },
@@ -466,7 +525,9 @@ fun CounselingDashboard(
 
 @Composable
 fun SubjectTeacherDashboard(
-    viewModel: SubjectTeacherViewModel = viewModel()
+    viewModel: SubjectTeacherViewModel = viewModel(),
+    onNavigateToLessonPlans: () -> Unit = {},
+    onNavigateToTagging: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val assignedClasses by viewModel.assignedClasses.collectAsState()
@@ -570,7 +631,7 @@ fun SubjectTeacherDashboard(
                 title = "教案模板庫",
                 description = "對接 108 課綱核心素養",
                 actionText = "開啟",
-                onClick = { /* TODO Sprint 2 */ }
+                onClick = onNavigateToLessonPlans
             )
         }
 
@@ -579,7 +640,7 @@ fun SubjectTeacherDashboard(
                 title = "課堂表現快速標記",
                 description = "即時記錄學生發言、分組表現",
                 actionText = "進入記錄",
-                onClick = { /* TODO Sprint 1-C */ }
+                onClick = { selectedClassId?.let { onNavigateToTagging(it) } }
             )
         }
         

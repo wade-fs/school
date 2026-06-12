@@ -360,6 +360,14 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
 
     val externalResources: Flow<List<ExternalResource>> = dao.getExternalResources()
 
+    val periodTimes: Flow<List<PeriodTime>> = dao.getPeriodTimes()
+
+    fun updatePeriodTimes(times: List<PeriodTime>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.upsertPeriodTimes(times)
+        }
+    }
+
     fun markNoteAsRead(noteId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.markNoteAsRead(noteId)

@@ -6,6 +6,9 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.wade.teacher.data.local.AppDatabase
+import com.wade.teacher.data.local.entity.ClassroomPerformance
+import com.wade.teacher.data.local.entity.LearningMaterial
+import com.wade.teacher.data.local.entity.LessonPlan
 import com.wade.teacher.data.local.entity.TimetableEntry
 import com.wade.teacher.util.CsvParser
 import kotlinx.coroutines.Dispatchers
@@ -111,4 +114,39 @@ class SubjectTeacherViewModel(application: Application) : AndroidViewModel(appli
             dao.deleteFullTimetable()
         }
     }
+
+    // --- Sprint 2: Lesson Plans ---
+
+    val allLessonPlans: Flow<List<LessonPlan>> = dao.getAllLessonPlans()
+
+    fun saveLessonPlan(plan: LessonPlan, materials: List<LearningMaterial>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val planId = dao.insertLessonPlan(plan).toInt()
+            materials.forEach {
+                dao.insertLearningMaterial(it.copy(lessonPlanId = planId))
+            }
+        }
+    }
+
+    fun getMaterialsForPlan(planId: Int) = dao.getMaterialsForPlan(planId)
+
+    // --- Sprint 1-C: Classroom Performance ---
+
+    fun markStudentPerformance(studentId: String, classId: String, tagName: String, note: String? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertClassroomPerformance(
+                ClassroomPerformance(
+                    studentId = studentId,
+                    classId = classId,
+                    tagName = tagName,
+                    academicYear = com.wade.teacher.util.AcademicUtils.getCurrentAcademicYear(),
+                    semester = com.wade.teacher.util.AcademicUtils.getCurrentSemester(),
+                    note = note
+                )
+            )
+        }
+    }
+
+    fun getStudentsInClass(classId: String) = dao.getAllStudents()
+        .map { list -> list.filter { it.currentClass == classId } }
 }

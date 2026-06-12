@@ -125,4 +125,34 @@ interface CounselorDao {
     @Query("DELETE FROM timetable_entries")
     suspend fun deleteFullTimetable()
 
+    // Period Times
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertPeriodTimes(times: List<PeriodTime>)
+
+    @Query("SELECT * FROM period_times ORDER BY period ASC")
+    fun getPeriodTimes(): Flow<List<PeriodTime>>
+
+    // Lesson Plans
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLessonPlan(plan: LessonPlan): Long
+
+    @Query("SELECT * FROM lesson_plans ORDER BY createdAt DESC")
+    fun getAllLessonPlans(): Flow<List<LessonPlan>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLearningMaterial(material: LearningMaterial)
+
+    @Query("SELECT * FROM learning_materials WHERE lessonPlanId = :planId")
+    fun getMaterialsForPlan(planId: Int): Flow<List<LearningMaterial>>
+
+    // Classroom Performance
+    @Insert
+    suspend fun insertClassroomPerformance(perf: ClassroomPerformance)
+
+    @Query("SELECT * FROM classroom_performances WHERE studentId = :studentId ORDER BY timestamp DESC")
+    fun getPerformanceForStudent(studentId: String): Flow<List<ClassroomPerformance>>
+
+    @Query("SELECT * FROM classroom_performances WHERE classId = :classId ORDER BY timestamp DESC")
+    fun getPerformanceForClass(classId: String): Flow<List<ClassroomPerformance>>
+
 }
