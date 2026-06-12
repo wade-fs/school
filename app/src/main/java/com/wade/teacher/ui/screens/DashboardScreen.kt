@@ -34,7 +34,8 @@ fun DashboardScreen(
     onNavigateToResources: () -> Unit = {},
     onNavigateToLessonPlans: () -> Unit = {},
     onNavigateToTagging: (String) -> Unit = {},
-    onNavigateToAssignments: (String) -> Unit = {}
+    onNavigateToAssignments: (String) -> Unit = {},
+    onNavigateToAnalysis: (String) -> Unit = {}
 ) {
     val viewModel: CounselorViewModel = viewModel()
     val schoolConfig by viewModel.schoolConfig.collectAsState()
@@ -130,7 +131,8 @@ fun DashboardScreen(
                         "subject" -> SubjectTeacherDashboard(
                             onNavigateToLessonPlans = onNavigateToLessonPlans,
                             onNavigateToTagging = onNavigateToTagging,
-                            onNavigateToAssignments = onNavigateToAssignments
+                            onNavigateToAssignments = onNavigateToAssignments,
+                            onNavigateToAnalysis = onNavigateToAnalysis
                         )
                         else -> RoleFeatureContent(role = role)
                     }
@@ -530,7 +532,8 @@ fun SubjectTeacherDashboard(
     viewModel: SubjectTeacherViewModel = viewModel(),
     onNavigateToLessonPlans: () -> Unit = {},
     onNavigateToTagging: (String) -> Unit = {},
-    onNavigateToAssignments: (String) -> Unit = {}
+    onNavigateToAssignments: (String) -> Unit = {},
+    onNavigateToAnalysis: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val assignedClasses by viewModel.assignedClasses.collectAsState()
@@ -653,6 +656,15 @@ fun SubjectTeacherDashboard(
                 description = "管理作業截止日期與批改進度",
                 actionText = "管理",
                 onClick = { selectedClassId?.let { onNavigateToAssignments(it) } }
+            )
+        }
+
+        item {
+            DashboardActionCard(
+                title = "學習成效分析",
+                description = "班級成績分佈與個別學習曲線",
+                actionText = "查看分析",
+                onClick = { selectedClassId?.let { onNavigateToAnalysis(it) } }
             )
         }
     }

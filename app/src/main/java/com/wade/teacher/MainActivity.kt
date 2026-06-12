@@ -19,6 +19,7 @@ import com.wade.teacher.ui.screens.ExternalResourceScreen
 import com.wade.teacher.ui.screens.LessonPlanScreen
 import com.wade.teacher.ui.screens.ClassroomTaggingScreen
 import com.wade.teacher.ui.screens.AssignmentManagementScreen
+import com.wade.teacher.ui.screens.GradeAnalysisScreen
 import com.wade.teacher.ui.theme.TaiwanTeacherAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -68,6 +69,9 @@ fun TeacherAppNavigation() {
                 },
                 onNavigateToAssignments = { classId ->
                     navController.navigate("assignment_management/$classId")
+                },
+                onNavigateToAnalysis = { classId ->
+                    navController.navigate("grade_analysis/$classId")
                 }
             )
         }
@@ -106,6 +110,13 @@ fun TeacherAppNavigation() {
         composable("assignment_management/{classId}") { backStackEntry ->
             val classId = backStackEntry.arguments?.getString("classId") ?: ""
             AssignmentManagementScreen(
+                classId = classId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("grade_analysis/{classId}") { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            GradeAnalysisScreen(
                 classId = classId,
                 onBack = { navController.popBackStack() }
             )

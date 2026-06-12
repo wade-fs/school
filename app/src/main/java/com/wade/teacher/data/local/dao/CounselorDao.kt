@@ -177,4 +177,7 @@ interface CounselorDao {
     @Query("SELECT * FROM students WHERE currentClass = :classId ORDER BY seatNo ASC")
     fun getStudentsByClass(classId: String): Flow<List<Student>>
 
+    @Query("SELECT s.* FROM submissions s INNER JOIN assignments a ON s.assignmentId = a.id WHERE a.classId = :classId")
+    fun getAllSubmissionsByClass(classId: String): Flow<List<Submission>>
+
 }

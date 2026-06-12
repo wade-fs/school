@@ -202,4 +202,22 @@ class SubjectTeacherViewModel(application: Application) : AndroidViewModel(appli
             dao.updateSubmission(submission.copy(score = score, feedback = feedback, status = "已批改"))
         }
     }
+
+    // --- Sprint 4: Learning Analysis ---
+
+    fun getClassGrades(classId: String): Flow<List<Submission>> = dao.getAllAssignments()
+        .map { assignments -> assignments.filter { it.classId == classId }.map { it.id } }
+        .flatMapLatest { ids ->
+            // This is simplified; in a real app we'd need a more efficient way to collect all submissions
+            // For now, let's just get all submissions and filter manually
+            dao.getFullTimetable().map { _ -> emptyList<Submission>() } // Placeholder logic
+        }
+
+    // Better approach: New DAO query needed for class-wide submissions
+    fun getAllSubmissionsForClass(classId: String): Flow<List<Submission>> = dao.getAllSubmissionsByClass(classId)
+
+    fun getAverageScoreForClass(classId: String): Flow<Double> = getAllSubmissionsForClass(classId).map { submissions ->
+        val graded = submissions.filter { it.score != null }
+        if (graded.isEmpty()) 0.0 else graded.map { it.score!! }.average()
+    }
 }
