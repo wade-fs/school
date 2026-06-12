@@ -47,8 +47,8 @@ fun TeacherAppNavigation() {
                 onNavigateToStudent = { id, name -> 
                     navController.navigate("student_detail/$id/$name")
                 },
-                onNavigateToMoodCheck = {
-                    navController.navigate("mood_check")
+                onNavigateToMoodCheck = { classId ->
+                    navController.navigate("mood_check?classId=$classId")
                 },
                 onNavigateToResources = {
                     navController.navigate("external_resources")
@@ -64,6 +64,12 @@ fun TeacherAppNavigation() {
                 },
                 onNavigateToAnalysis = { classId ->
                     navController.navigate("grade_analysis/$classId")
+                },
+                onNavigateToAttendance = { classId ->
+                    navController.navigate("attendance/$classId")
+                },
+                onNavigateToBulletins = { classId ->
+                    navController.navigate("bulletins/$classId")
                 }
             )
         }
@@ -76,10 +82,13 @@ fun TeacherAppNavigation() {
                 onBack = { navController.popBackStack() }
             )
         }
-        composable("mood_check") {
+        composable("mood_check?classId={classId}", arguments = listOf(
+            androidx.navigation.navArgument("classId") { nullable = true }
+        )) { backStackEntry ->
             MoodCheckScreen(
                 viewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                preSelectedClassId = backStackEntry.arguments?.getString("classId")
             )
         }
         composable("external_resources") {
@@ -109,6 +118,20 @@ fun TeacherAppNavigation() {
         composable("grade_analysis/{classId}") { backStackEntry ->
             val classId = backStackEntry.arguments?.getString("classId") ?: ""
             GradeAnalysisScreen(
+                classId = classId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("attendance/{classId}") { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            AttendanceScreen(
+                classId = classId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("bulletins/{classId}") { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            ClassBulletinScreen(
                 classId = classId,
                 onBack = { navController.popBackStack() }
             )

@@ -247,6 +247,32 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         }.map { it.studentId }
     }
 
+    // ── 導師功能 (Homeroom) ──────────────────────────────────────────────────
+    fun submitAttendance(records: List<AttendanceRecord>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertAttendance(records)
+        }
+    }
+
+    fun getAttendanceForToday(classId: String): Flow<List<AttendanceRecord>> {
+        val calendar = java.util.Calendar.getInstance()
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        calendar.set(java.util.Calendar.MINUTE, 0)
+        calendar.set(java.util.Calendar.SECOND, 0)
+        calendar.set(java.util.Calendar.MILLISECOND, 0)
+        val startOfDay = calendar.timeInMillis
+        val endOfDay = startOfDay + 86400000L
+        return dao.getAttendanceForDate(classId, startOfDay, endOfDay)
+    }
+
+    fun publishBulletin(classId: String, title: String, content: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertBulletin(ClassBulletin(classId = classId, title = title, content = content))
+        }
+    }
+
+    fun getBulletins(classId: String): Flow<List<ClassBulletin>> = dao.getBulletinsForClass(classId)
+
     companion object {
         fun defaultPeriodTimes(): List<PeriodTime> = listOf(
             PeriodTime(period = 0, startTime = "07:30", endTime = "08:10"),

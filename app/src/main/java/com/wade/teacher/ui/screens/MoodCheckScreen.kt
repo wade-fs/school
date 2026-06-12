@@ -5,7 +5,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,19 +12,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wade.teacher.data.local.entity.Student
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoodCheckScreen(
-    viewModel: CounselorViewModel,
-    onBack: () -> Unit
+    viewModel: CounselorViewModel = viewModel(),
+    onBack: () -> Unit,
+    preSelectedClassId: String? = null
 ) {
     val classes by viewModel.classes.collectAsState()
     val students by viewModel.students.collectAsState()
     val activeSessionId by viewModel.activeSessionId.collectAsState()
 
-    var selectedClass by remember { mutableStateOf("") }
+    var selectedClass by remember { mutableStateOf(preSelectedClassId ?: "") }
     var expanded by remember { mutableStateOf(false) }
 
     // Map to store scores and notes: studentId -> (score, note)
@@ -51,36 +52,41 @@ fun MoodCheckScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            Text("選擇施測班級", style = MaterialTheme.typography.labelLarge)
-            
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-            ) {
-                OutlinedTextField(
-                    value = selectedClass,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("班級") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth()
-                )
-                ExposedDropdownMenu(
+            if (preSelectedClassId == null) {
+                Text("選擇施測班級", style = MaterialTheme.typography.labelLarge)
+                
+                ExposedDropdownMenuBox(
                     expanded = expanded,
-                    onDismissRequest = { expanded = false }
+                    onExpandedChange = { expanded = !expanded },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                 ) {
-                    classes.forEach { className ->
-                        DropdownMenuItem(
-                            text = { Text(className) },
-                            onClick = {
-                                selectedClass = className
-                                expanded = false
-                                moodData.clear()
-                            }
-                        )
+                    OutlinedTextField(
+                        value = selectedClass,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("班級") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        classes.forEach { className ->
+                            DropdownMenuItem(
+                                text = { Text(className) },
+                                onClick = {
+                                    selectedClass = className
+                                    expanded = false
+                                    moodData.clear()
+                                }
+                            )
+                        }
                     }
                 }
+            } else {
+                Text("施測班級: $preSelectedClassId", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             if (selectedClass.isNotEmpty()) {

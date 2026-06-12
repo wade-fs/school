@@ -40,12 +40,14 @@ fun DashboardScreen(
     role: String, 
     onBack: () -> Unit, 
     onNavigateToStudent: (String, String) -> Unit = { _, _ -> },
-    onNavigateToMoodCheck: () -> Unit = {},
+    onNavigateToMoodCheck: (String?) -> Unit = {},
     onNavigateToResources: () -> Unit = {},
     onNavigateToLessonPlans: () -> Unit = {},
     onNavigateToTagging: (String) -> Unit = {},
     onNavigateToAssignments: (String) -> Unit = {},
-    onNavigateToAnalysis: (String) -> Unit = {}
+    onNavigateToAnalysis: (String) -> Unit = {},
+    onNavigateToAttendance: (String) -> Unit = {},
+    onNavigateToBulletins: (String) -> Unit = {}
 ) {
     val viewModel: CounselorViewModel = viewModel()
     val schoolConfig by viewModel.schoolConfig.collectAsState()
@@ -137,7 +139,7 @@ fun DashboardScreen(
             when (selectedTabIndex) {
                 0 -> {
                     when (role) {
-                        "counseling" -> CounselingDashboard(onNavigateToStudent, onNavigateToMoodCheck, onNavigateToResources, viewModel)
+                        "counseling" -> CounselingDashboard(onNavigateToStudent, { onNavigateToMoodCheck(null) }, onNavigateToResources, viewModel)
                         "subject" -> SubjectTeacherDashboard(
                             onNavigateToLessonPlans = onNavigateToLessonPlans,
                             onNavigateToTagging = onNavigateToTagging,
@@ -146,7 +148,9 @@ fun DashboardScreen(
                         )
                         "homeroom" -> HomeroomDashboard(
                             onNavigateToStudent = onNavigateToStudent,
-                            onNavigateToMoodCheck = onNavigateToMoodCheck,
+                            onNavigateToMoodCheck = { onNavigateToMoodCheck(schoolConfig.homeroomClass) },
+                            onNavigateToAttendance = onNavigateToAttendance,
+                            onNavigateToBulletins = onNavigateToBulletins,
                             viewModel = viewModel
                         )
                         else -> RoleFeatureContent(role = role)
@@ -586,17 +590,36 @@ fun CounselingDashboard(
 fun HomeroomDashboard(
     onNavigateToStudent: (String, String) -> Unit,
     onNavigateToMoodCheck: () -> Unit,
+    onNavigateToAttendance: (String) -> Unit,
+    onNavigateToBulletins: (String) -> Unit,
     viewModel: CounselorViewModel
 ) {
     val schoolConfig by viewModel.schoolConfig.collectAsState()
     val students by viewModel.homeroomStudents.collectAsState()
+    val classId = schoolConfig.homeroomClass
     
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp)
     ) {
         item {
-            Text("導師班級：${schoolConfig.homeroomClass} 班", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("導師班級：$classId 班", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        
+        item {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { onNavigateToAttendance(classId) },
+                    modifier = Modifier.weight(1f)
+                ) { Text("數位點名") }
+                
+                Button(
+                    onClick = { onNavigateToBulletins(classId) },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) { Text("班級公告") }
+            }
             Spacer(modifier = Modifier.height(12.dp))
         }
         

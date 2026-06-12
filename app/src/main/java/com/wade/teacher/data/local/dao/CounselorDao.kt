@@ -182,4 +182,18 @@ interface CounselorDao {
 
     @Query("SELECT * FROM counselor_teacher_notes WHERE studentId = :studentId ORDER BY createdAt DESC")
     fun getNotesForStudent(studentId: String): Flow<List<CounselorTeacherNote>>
+
+    // ── Attendance ────────────────────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAttendance(records: List<AttendanceRecord>)
+
+    @Query("SELECT * FROM attendance_records WHERE classId = :classId AND date >= :startOfDay AND date < :endOfDay")
+    fun getAttendanceForDate(classId: String, startOfDay: Long, endOfDay: Long): Flow<List<AttendanceRecord>>
+
+    // ── Class Bulletins ───────────────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBulletin(bulletin: ClassBulletin)
+
+    @Query("SELECT * FROM class_bulletins WHERE classId = :classId ORDER BY timestamp DESC")
+    fun getBulletinsForClass(classId: String): Flow<List<ClassBulletin>>
 }
