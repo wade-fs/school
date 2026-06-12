@@ -248,6 +248,65 @@ fun StudentDetailScreen(
         )
     }
 
+    if (showNoteDialog) {
+        AlertDialog(
+            onDismissRequest = { showNoteDialog = false },
+            title = { Text("✉ 通知導師") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    val requestOptions = listOf("請多關心", "注意課堂行為", "避免點名", "其他")
+                    Text("請求類型", style = MaterialTheme.typography.labelSmall)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        requestOptions.take(2).forEach { type ->
+                            FilterChip(
+                                selected = noteRequestType == type,
+                                onClick = { noteRequestType = type },
+                                label = { Text(type, fontSize = 10.sp) }
+                            )
+                        }
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        requestOptions.drop(2).forEach { type ->
+                            FilterChip(
+                                selected = noteRequestType == type,
+                                onClick = { noteRequestType = type },
+                                label = { Text(type, fontSize = 10.sp) }
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = noteSummary,
+                        onValueChange = { noteSummary = it },
+                        label = { Text("備忘摘要") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        placeholder = { Text("⚠ 請勿填寫個案細節") }
+                    )
+                    Text("提示：此欄位將傳送給導師，僅供課堂協作參考。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.sendNoteToTeacher(
+                            studentId = studentId,
+                            fromCounselorId = "Counselor_1", // Simplified
+                            toTeacherId = currentEntry?.student?.currentClass ?: "Teacher_1",
+                            summary = noteSummary,
+                            requestType = noteRequestType
+                        )
+                        showNoteDialog = false
+                        Toast.makeText(context, "已傳送給導師", Toast.LENGTH_SHORT).show()
+                    }
+                ) { Text("送出") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNoteDialog = false }) { Text("取消") }
+            }
+        )
+    }
+
     val calendar = Calendar.getInstance()
     val timePickerDialog = android.app.TimePickerDialog(
         context,
@@ -436,6 +495,16 @@ fun StudentDetailScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("⚠ 通報危機事件")
                         }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = { showNoteDialog = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Email, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("✉ 通知導師")
+                        }
                     }
                 }
                 
@@ -477,6 +546,40 @@ fun StudentDetailScreen(
                 items(crisisEvents) { event ->
                     CrisisEventItem(event)
                 }
+            }
+
+            if (teacherNotes.isNotEmpty()) {
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text("導師協作備忘歷史", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                items(teacherNotes) { note ->
+                    TeacherNoteItem(note)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TeacherNoteItem(note: CounselorTeacherNote) {
+    val date = Date(note.createdAt)
+    val format = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault())
+    
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(text = note.requestType, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                Text(text = format.format(date), style = MaterialTheme.typography.labelSmall)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = note.summary, style = MaterialTheme.typography.bodySmall)
+            if (note.isRead) {
+                Text(text = "導師已閱", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             }
         }
     }

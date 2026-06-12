@@ -185,65 +185,32 @@ fun getCrisisEventsForStudent(...)
 
 ---
 
-### Sprint 4 — 導師協作備忘（約 3 天）
+### Sprint 4 — 導師協作備忘 (✅ 完整)
 
-Entity（`CounselorTeacherNote`）已就緒，DAO 中**尚未定義**相關 query，需補充。
+Entity（`CounselorTeacherNote`）已就緒。
 
-#### 4-A：補充 DAO 方法
-
-```kotlin
-// 需加入 CounselorDao
-@Insert(onConflict = OnConflictStrategy.REPLACE)
-suspend fun insertCounselorNote(note: CounselorTeacherNote)
-
-@Query("SELECT * FROM counselor_teacher_notes WHERE toTeacherId = :teacherId AND isRead = 0")
-fun getUnreadNotesForTeacher(teacherId: String): Flow<List<CounselorTeacherNote>>
-
-@Query("SELECT * FROM counselor_teacher_notes WHERE studentId = :studentId ORDER BY createdAt DESC")
-fun getNotesForStudent(studentId: String): Flow<List<CounselorTeacherNote>>
-
-@Query("UPDATE counselor_teacher_notes SET isRead = 1 WHERE id = :id")
-suspend fun markNoteAsRead(id: Int)
-```
-
-#### 4-B：ViewModel 新增方法
+#### 4-A：補充 DAO 方法 (✅)
 
 ```kotlin
-fun sendNoteToTeacher(
-    studentId: String,
-    fromCounselorId: String,
-    toTeacherId: String,
-    summary: String,        // 去識別化，不含晤談細節
-    requestType: String     // "請多關心" / "注意課堂行為" / "避免點名" / "其他"
-) {
-    viewModelScope.launch(Dispatchers.IO) {
-        dao.insertCounselorNote(
-            CounselorTeacherNote(
-                studentId = studentId,
-                fromCounselorId = fromCounselorId,
-                toTeacherId = toTeacherId,
-                summary = summary,
-                requestType = requestType
-            )
-        )
-    }
-}
+suspend fun insertCounselorNote(...)
+fun getUnreadNotesForTeacher(...)
+fun getNotesForStudent(...)
+suspend fun markNoteAsRead(...)
 ```
 
-#### 4-C：UI 規劃
+#### 4-B：ViewModel 新增方法 (✅)
 
-**入口**：`StudentDetailScreen` 新增「✉ 通知導師」按鈕
-
-**表單**（Dialog）：
+```kotlin
+fun sendNoteToTeacher(...)
+fun getNotesForStudent(...)
+fun markNoteAsRead(...)
 ```
-請求類型（Chip 單選）：
-  請多關心、注意課堂行為、避免點名、其他
 
-備忘摘要（OutlinedTextField）
-  ⚠ 提示：「此欄位將傳送給導師，請勿填寫個案細節」
+#### 4-C：UI 規劃 (✅)
 
-[送出]
-```
+- `StudentDetailScreen` 新增「✉ 通知導師」按鈕
+- `CounselorNoteDialog`: 請求類型 Chip、備忘摘要輸入
+- 歷史顯示: `TeacherNoteItem` 顯示請求類型與摘要，包含導師已閱狀態
 
 ---
 
