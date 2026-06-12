@@ -33,7 +33,8 @@ fun DashboardScreen(
     onNavigateToMoodCheck: () -> Unit = {},
     onNavigateToResources: () -> Unit = {},
     onNavigateToLessonPlans: () -> Unit = {},
-    onNavigateToTagging: (String) -> Unit = {}
+    onNavigateToTagging: (String) -> Unit = {},
+    onNavigateToAssignments: (String) -> Unit = {}
 ) {
     val viewModel: CounselorViewModel = viewModel()
     val schoolConfig by viewModel.schoolConfig.collectAsState()
@@ -128,7 +129,8 @@ fun DashboardScreen(
                         "counseling" -> CounselingDashboard(onNavigateToStudent, onNavigateToMoodCheck, onNavigateToResources, viewModel)
                         "subject" -> SubjectTeacherDashboard(
                             onNavigateToLessonPlans = onNavigateToLessonPlans,
-                            onNavigateToTagging = onNavigateToTagging
+                            onNavigateToTagging = onNavigateToTagging,
+                            onNavigateToAssignments = onNavigateToAssignments
                         )
                         else -> RoleFeatureContent(role = role)
                     }
@@ -527,7 +529,8 @@ fun CounselingDashboard(
 fun SubjectTeacherDashboard(
     viewModel: SubjectTeacherViewModel = viewModel(),
     onNavigateToLessonPlans: () -> Unit = {},
-    onNavigateToTagging: (String) -> Unit = {}
+    onNavigateToTagging: (String) -> Unit = {},
+    onNavigateToAssignments: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val assignedClasses by viewModel.assignedClasses.collectAsState()
@@ -647,9 +650,9 @@ fun SubjectTeacherDashboard(
         item {
             DashboardActionCard(
                 title = "作業派發",
-                description = "目前有 0 份作業待批改",
+                description = "管理作業截止日期與批改進度",
                 actionText = "管理",
-                onClick = { /* TODO Sprint 3 */ }
+                onClick = { selectedClassId?.let { onNavigateToAssignments(it) } }
             )
         }
     }

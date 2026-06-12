@@ -155,4 +155,26 @@ interface CounselorDao {
     @Query("SELECT * FROM classroom_performances WHERE classId = :classId ORDER BY timestamp DESC")
     fun getPerformanceForClass(classId: String): Flow<List<ClassroomPerformance>>
 
+    // Assignments
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAssignment(assignment: Assignment): Long
+
+    @Query("SELECT * FROM assignments WHERE classId = :classId ORDER BY createdAt DESC")
+    fun getAssignmentsForClass(classId: String): Flow<List<Assignment>>
+
+    @Query("SELECT * FROM assignments ORDER BY createdAt DESC")
+    fun getAllAssignments(): Flow<List<Assignment>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSubmissions(submissions: List<Submission>)
+
+    @Query("SELECT * FROM submissions WHERE assignmentId = :assignmentId")
+    fun getSubmissionsForAssignment(assignmentId: Int): Flow<List<Submission>>
+
+    @Update
+    suspend fun updateSubmission(submission: Submission)
+
+    @Query("SELECT * FROM students WHERE currentClass = :classId ORDER BY seatNo ASC")
+    fun getStudentsByClass(classId: String): Flow<List<Student>>
+
 }

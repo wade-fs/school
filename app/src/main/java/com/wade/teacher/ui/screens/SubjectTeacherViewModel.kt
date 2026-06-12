@@ -9,6 +9,8 @@ import com.wade.teacher.data.local.AppDatabase
 import com.wade.teacher.data.local.entity.ClassroomPerformance
 import com.wade.teacher.data.local.entity.LearningMaterial
 import com.wade.teacher.data.local.entity.LessonPlan
+import com.wade.teacher.data.local.entity.Assignment
+import com.wade.teacher.data.local.entity.Submission
 import com.wade.teacher.data.local.entity.TimetableEntry
 import com.wade.teacher.util.CsvParser
 import kotlinx.coroutines.Dispatchers
@@ -163,4 +165,41 @@ class SubjectTeacherViewModel(application: Application) : AndroidViewModel(appli
 
     fun getStudentsInClass(classId: String) = dao.getAllStudents()
         .map { list -> list.filter { it.currentClass == classId } }
+
+    // --- Sprint 3: Assignments ---
+
+    fun createAssignment(classId: String, subjectName: String, title: String, description: String, dueDate: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val assignment = Assignment(
+                classId = classId,
+                subjectName = subjectName,
+                title = title,
+                description = description,
+                dueDate = dueDate
+            )
+            val assignmentId = dao.insertAssignment(assignment).toInt()
+            
+            // Auto-create pending submissions for all students in the class
+            val students = dao.getStudentsByClass(classId).first()
+            val submissions = students.map { student ->
+                Submission(
+                    assignmentId = assignmentId,
+                    studentId = student.studentId,
+                    studentName = student.name,
+                    status = "待繳"
+                )
+            }
+            dao.insertSubmissions(submissions)
+        }
+    }
+
+    fun getAssignmentsForClass(classId: String) = dao.getAssignmentsForClass(classId)
+
+    fun getSubmissionsForAssignment(assignmentId: Int) = dao.getSubmissionsForAssignment(assignmentId)
+
+    fun gradeSubmission(submission: Submission, score: Int, feedback: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.updateSubmission(submission.copy(score = score, feedback = feedback, status = "已批改"))
+        }
+    }
 }

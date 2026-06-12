@@ -28,9 +28,11 @@ import kotlinx.coroutines.launch
         PeriodTime::class,
         LessonPlan::class,
         LearningMaterial::class,
-        ClassroomPerformance::class
+        ClassroomPerformance::class,
+        Assignment::class,
+        Submission::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
