@@ -79,4 +79,30 @@ object CsvParser {
         }
         return result
     }
+
+    data class GradeImportRow(val studentId: String, val score: Int, val feedback: String?)
+
+    fun parseGradeCsv(inputStream: InputStream): List<GradeImportRow> {
+        val result = mutableListOf<GradeImportRow>()
+        val reader = BufferedReader(InputStreamReader(inputStream))
+        
+        // Skip header: 學號,分數,評語
+        val header = reader.readLine() ?: return emptyList()
+        
+        reader.forEachLine { line ->
+            val tokens = line.split(",")
+            if (tokens.size >= 2) {
+                try {
+                    result.add(GradeImportRow(
+                        studentId = tokens[0].trim(),
+                        score = tokens[1].trim().toInt(),
+                        feedback = tokens.getOrNull(2)?.trim()
+                    ))
+                } catch (e: Exception) {
+                    // Skip invalid line
+                }
+            }
+        }
+        return result
+    }
 }

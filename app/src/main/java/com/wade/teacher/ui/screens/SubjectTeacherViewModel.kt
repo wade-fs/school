@@ -203,6 +203,40 @@ class SubjectTeacherViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
+    fun importGrades(assignmentId: Int, context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _isImporting.value = true
+            try {
+                val rows = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { 
+                        CsvParser.parseGradeCsv(it)
+                    } ?: emptyList()
+                }
+                
+                if (rows.isNotEmpty()) {
+                    withContext(Dispatchers.IO) {
+                        // Get current submissions for this assignment to find IDs
+                        val currentSubmissions = dao.getSubmissionsForAssignment(assignmentId).first()
+                        rows.forEach { row ->
+                            currentSubmissions.find { it.studentId == row.studentId }?.let { submission ->
+                                dao.updateSubmission(submission.copy(
+                                    score = row.score,
+                                    feedback = row.feedback,
+                                    status = "已批改",
+                                    submittedAt = System.currentTimeMillis()
+                                ))
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SubjectTeacherViewModel", "Error importing grades", e)
+            } finally {
+                _isImporting.value = false
+            }
+        }
+    }
+
     // --- Sprint 4: Learning Analysis ---
 
     fun getClassGrades(classId: String): Flow<List<Submission>> = dao.getAllAssignments()

@@ -12,6 +12,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -110,8 +113,14 @@ fun SubmissionListScreen(
     onBack: () -> Unit,
     viewModel: SubjectTeacherViewModel
 ) {
+    val context = LocalContext.current
     val submissions by viewModel.getSubmissionsForAssignment(assignment.id).collectAsState(initial = emptyList())
+    val isImporting by viewModel.isImporting.collectAsState()
     var selectedSubmission by remember { mutableStateOf<Submission?>(null) }
+
+    val gradePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { viewModel.importGrades(assignment.id, context, it) }
+    }
 
     Scaffold(
         topBar = {
@@ -120,6 +129,15 @@ fun SubmissionListScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                    }
+                },
+                actions = {
+                    if (isImporting) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                    } else {
+                        IconButton(onClick = { gradePicker.launch(arrayOf("*/*")) }) {
+                            Icon(Icons.Default.UploadFile, contentDescription = "匯入成績")
+                        }
                     }
                 }
             )
