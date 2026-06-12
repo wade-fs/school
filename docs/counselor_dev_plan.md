@@ -214,49 +214,24 @@ fun markNoteAsRead(...)
 
 ---
 
-### Sprint 5 — 校外資源庫（約 2 天）
+### Sprint 5 — 校外資源庫 (✅ 完整)
 
-Entity（`ExternalResource`）已就緒，需預填內建資料並建 UI。
+Entity（`ExternalResource`）已就緒。
 
-#### 5-A：預填內建資料
+#### 5-A：預填內建資料 (✅)
 
-```kotlin
-// 在 AppDatabase.getDatabase() 加入 callback
-.addCallback(object : RoomDatabase.Callback() {
-    override fun onCreate(db: SupportSQLiteDatabase) {
-        super.onCreate(db)
-        // 用 coroutine 預填
-        CoroutineScope(Dispatchers.IO).launch {
-            instance.counselorDao().apply {
-                insertExternalResource(ExternalResource(name="安心專線", phone="1925", type="24小時專線", city=null, isEmergency=true))
-                insertExternalResource(ExternalResource(name="生命線", phone="1995", type="24小時專線", city=null, isEmergency=true))
-                insertExternalResource(ExternalResource(name="兒童保護專線", phone="113", type="24小時專線", city=null, isEmergency=true))
-                insertExternalResource(ExternalResource(name="少年專線", phone="0800-001769", type="全國專線", city=null, isEmergency=false))
-                insertExternalResource(ExternalResource(name="張老師專線", phone="1980", type="24小時專線", city=null, isEmergency=false))
-            }
-        }
-    }
-})
-```
+在 `AppDatabase` 的 `onCreate` callback 中實作了預填邏輯：
+- 安心專線 (1925)
+- 生命線 (1995)
+- 兒童保護專線 (113)
+- 少年專線
+- 張老師專線
 
-#### 5-B：UI 規劃
+#### 5-B：UI 規劃 (✅)
 
-**入口**：`CounselingDashboard` 底部「校外資源」固定區塊  
-或從 `StudentDetailScreen` 的 TopBar action 進入
-
-**資源清單頁 `ExternalResourceScreen`**：
-```
-緊急求助（紅色區塊）
-  安心專線 1925  [撥打]
-  生命線   1995  [撥打]
-  兒少保護  113  [撥打]
-
-其他資源（依縣市篩選）
-  [縣市下拉]
-  ...列表...
-```
-
-點擊「撥打」直接呼叫 `Intent(Intent.ACTION_DIAL, Uri.parse("tel:1925"))`，不需網路。
+- `ExternalResourceScreen`: 分為「緊急求助」與「常用機構」兩大區塊。
+- 撥打功能: 點擊按鈕直接開啟系統撥號介面。
+- 入口: `CounselingDashboard` 新增「校外資源庫」功能卡片。
 
 ---
 

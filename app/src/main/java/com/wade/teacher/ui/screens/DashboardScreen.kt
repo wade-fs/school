@@ -30,7 +30,8 @@ fun DashboardScreen(
     role: String, 
     onBack: () -> Unit, 
     onNavigateToStudent: (String, String) -> Unit = { _, _ -> },
-    onNavigateToMoodCheck: () -> Unit = {}
+    onNavigateToMoodCheck: () -> Unit = {},
+    onNavigateToResources: () -> Unit = {}
 ) {
     val viewModel: CounselorViewModel = viewModel()
     val schoolConfig by viewModel.schoolConfig.collectAsState()
@@ -39,11 +40,16 @@ fun DashboardScreen(
     var showSettingsDialog by remember { mutableStateOf(false) }
 
     if (showSettingsDialog) {
+        val moeSchools by viewModel.moeSchools.collectAsState()
+        val isFetching by viewModel.isFetchingSchools.collectAsState()
+        
         SchoolSettingsDialog(
             config = schoolConfig,
+            moeSchools = moeSchools,
+            isFetching = isFetching,
             onDismiss = { showSettingsDialog = false },
-            onSave = { name, type ->
-                viewModel.updateSchoolConfig(name, type)
+            onSave = { name, type, website ->
+                viewModel.updateSchoolConfig(name, type, website)
                 showSettingsDialog = false
             }
         )
@@ -55,7 +61,9 @@ fun DashboardScreen(
                 title = { 
                     Column {
                         Text(text = schoolConfig.schoolName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text(text = "${com.wade.teacher.util.AcademicUtils.getAcademicString()} ($roleTitle)", style = MaterialTheme.typography.labelSmall)
+                        val academicInfo = "${com.wade.teacher.util.AcademicUtils.getAcademicString()} ($roleTitle)"
+                        val websiteInfo = schoolConfig.schoolWebsite?.let { " | $it" } ?: ""
+                        Text(text = academicInfo + websiteInfo, style = MaterialTheme.typography.labelSmall)
                     }
                 },
                 navigationIcon = {
@@ -112,7 +120,7 @@ fun DashboardScreen(
             when (selectedTabIndex) {
                 0 -> {
                     if (role == "counseling") {
-                        CounselingDashboard(onNavigateToStudent, onNavigateToMoodCheck, viewModel)
+                        CounselingDashboard(onNavigateToStudent, onNavigateToMoodCheck, onNavigateToResources, viewModel)
                     } else {
                         RoleFeatureContent(role = role)
                     }
@@ -127,17 +135,25 @@ fun DashboardScreen(
 @Composable
 fun SchoolSettingsDialog(
     config: com.wade.teacher.data.local.entity.SchoolConfig,
+    moeSchools: List<MoeSchool>,
+    isFetching: Boolean,
     onDismiss: () -> Unit,
-    onSave: (String, com.wade.teacher.data.local.entity.SchoolType) -> Unit
+    onSave: (String, com.wade.teacher.data.local.entity.SchoolType, String?) -> Unit
 ) {
     var name by remember { mutableStateOf(config.schoolName) }
     var selectedType by remember { mutableStateOf(config.schoolType) }
+    var website by remember { mutableStateOf(config.schoolWebsite) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredSchools = if (searchQuery.length >= 2) {
+        moeSchools.filter { it.name.contains(searchQuery) }
+    } else emptyList()
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("全校性設定") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -145,6 +161,45 @@ fun SchoolSettingsDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 
+                if (website != null) {
+                    Text("網站: $website", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("快速從教育部名單挑選 (輸入關鍵字):", style = MaterialTheme.typography.labelMedium)
+                
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("搜尋學校") },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        if (isFetching) CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                    }
+                )
+
+                if (filteredSchools.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 150.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        LazyColumn {
+                            items(filteredSchools) { school ->
+                                ListItem(
+                                    headlineContent = { Text(school.name, fontSize = 14.sp) },
+                                    supportingContent = { Text(school.city, fontSize = 12.sp) },
+                                    modifier = Modifier.clickable {
+                                        name = school.name
+                                        website = school.website
+                                        searchQuery = ""
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
                 Text("學校類型", style = MaterialTheme.typography.labelLarge)
                 com.wade.teacher.data.local.entity.SchoolType.values().forEach { type ->
                     val label = when (type) {
@@ -163,7 +218,7 @@ fun SchoolSettingsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(name, selectedType) }) {
+            TextButton(onClick = { onSave(name, selectedType, website) }) {
                 Text("儲存")
             }
         },
@@ -180,6 +235,7 @@ fun SchoolSettingsDialog(
 fun CounselingDashboard(
     onNavigateToStudent: (String, String) -> Unit,
     onNavigateToMoodCheck: () -> Unit,
+    onNavigateToResources: () -> Unit,
     viewModel: CounselorViewModel
 ) {
     val context = LocalContext.current
@@ -245,6 +301,14 @@ fun CounselingDashboard(
             description = moodDesc,
             actionText = "開始施測",
             onClick = onNavigateToMoodCheck
+        )
+
+        // --- Sprint 5: External Resources Card ---
+        DashboardActionCard(
+            title = "校外資源庫",
+            description = "包含安心專線、生命線等 24 小時求助資源",
+            actionText = "查看清單",
+            onClick = onNavigateToResources
         )
 
         // Mood Alerts

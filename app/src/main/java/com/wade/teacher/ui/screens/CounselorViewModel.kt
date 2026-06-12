@@ -9,13 +9,25 @@ import com.wade.teacher.data.local.AppDatabase
 import com.wade.teacher.data.local.entity.*
 import com.wade.teacher.util.CaseLogCrypto
 import com.wade.teacher.util.CsvParser
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.client.engine.android.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+data class MoeSchool(
+    val id: String,
+    val name: String,
+    val city: String,
+    val website: String
+)
+
 class CounselorViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = AppDatabase.getDatabase(application).counselorDao()
+    private val client = HttpClient(Android)
 
     val studentsWithProfiles: StateFlow<List<StudentWithProfile>> = dao.getAllStudentsWithProfiles()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -34,8 +46,68 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     private val _schoolConfig = MutableStateFlow(SchoolConfig())
     val schoolConfig: StateFlow<SchoolConfig> = _schoolConfig
 
-    fun updateSchoolConfig(name: String, type: SchoolType) {
-        _schoolConfig.value = SchoolConfig(name, type)
+    private val _moeSchools = MutableStateFlow<List<MoeSchool>>(emptyList())
+    val moeSchools: StateFlow<List<MoeSchool>> = _moeSchools
+
+    private val _isFetchingSchools = MutableStateFlow(false)
+    val isFetchingSchools: StateFlow<Boolean> = _isFetchingSchools
+
+    init {
+        fetchMoeSchools()
+    }
+
+    fun updateSchoolConfig(name: String, type: SchoolType, website: String? = null) {
+        _schoolConfig.value = SchoolConfig(name, type, website)
+    }
+
+    fun fetchMoeSchools() {
+        viewModelScope.launch {
+            _isFetchingSchools.value = true
+            
+            // Logic: MOE academic year starts on Aug 1st.
+            val calendar = java.util.Calendar.getInstance()
+            val currentYear = calendar.get(java.util.Calendar.YEAR) - 1911
+            val currentMonth = calendar.get(java.util.Calendar.MONTH) + 1 // 1-12
+            
+            val targetAcademicYear = if (currentMonth >= 8) currentYear else currentYear - 1
+            
+            val success = attemptFetch(targetAcademicYear)
+            if (!success) {
+                // Fallback to previous year if the current one isn't available yet
+                android.util.Log.w("CounselorViewModel", "Failed to fetch $targetAcademicYear, falling back to ${targetAcademicYear - 1}")
+                attemptFetch(targetAcademicYear - 1)
+            }
+            
+            _isFetchingSchools.value = false
+        }
+    }
+
+    private suspend fun attemptFetch(academicYear: Int): Boolean {
+        return try {
+            val url = "https://stats.moe.gov.tw/files/school/$academicYear/high.csv"
+            val response: HttpResponse = client.get(url)
+            if (response.status.value in 200..299) {
+                val content = response.bodyAsText()
+                val schools = content.lines().drop(1).mapNotNull { line ->
+                    val parts = line.split(",")
+                    if (parts.size >= 8) {
+                        MoeSchool(
+                            id = parts[1].trim('"'),
+                            name = parts[2].trim('"'),
+                            city = parts[4].trim('"'),
+                            website = parts[7].trim('"')
+                        )
+                    } else null
+                }
+                if (schools.isNotEmpty()) {
+                    _moeSchools.value = schools
+                    true
+                } else false
+            } else false
+        } catch (e: Exception) {
+            android.util.Log.e("CounselorViewModel", "Error fetching schools for year $academicYear", e)
+            false
+        }
     }
 
     // --- Sprint 6: Audit Logging ---
@@ -283,6 +355,10 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun getNotesForStudent(studentId: String): Flow<List<CounselorTeacherNote>> =
         dao.getNotesForStudent(studentId)
+
+    // --- Sprint 5: External Resources ---
+
+    val externalResources: Flow<List<ExternalResource>> = dao.getExternalResources()
 
     fun markNoteAsRead(noteId: Int) {
         viewModelScope.launch(Dispatchers.IO) {

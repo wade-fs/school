@@ -102,6 +102,9 @@ interface CounselorDao {
     @Query("SELECT * FROM external_resources")
     fun getExternalResources(): Flow<List<ExternalResource>>
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertExternalResource(resource: ExternalResource)
+
     // Audit Logs
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAuditLog(log: AuditLog)

@@ -15,6 +15,7 @@ import com.wade.teacher.ui.screens.RoleSelectorScreen
 import com.wade.teacher.ui.screens.DashboardScreen
 import com.wade.teacher.ui.screens.StudentDetailScreen
 import com.wade.teacher.ui.screens.MoodCheckScreen
+import com.wade.teacher.ui.screens.ExternalResourceScreen
 import com.wade.teacher.ui.theme.TaiwanTeacherAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -52,6 +53,9 @@ fun TeacherAppNavigation() {
                 },
                 onNavigateToMoodCheck = {
                     navController.navigate("mood_check")
+                },
+                onNavigateToResources = {
+                    navController.navigate("external_resources")
                 }
             )
         }
@@ -67,6 +71,11 @@ fun TeacherAppNavigation() {
         composable("mood_check") {
             MoodCheckScreen(
                 viewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("external_resources") {
+            ExternalResourceScreen(
                 onBack = { navController.popBackStack() }
             )
         }
