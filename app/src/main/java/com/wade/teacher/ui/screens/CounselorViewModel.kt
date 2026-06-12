@@ -129,6 +129,45 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun importStudentsForClass(context: Context, uri: Uri, classId: String) {
+        viewModelScope.launch {
+            _isImporting.value = true
+            
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                if (inputStream == null) return@launch
+                
+                val importedList = withContext(Dispatchers.IO) {
+                    inputStream.use { CsvParser.parseStudentCsv(it) }
+                }
+                
+                // Filter only students belonging to this class (case-insensitive and trimmed)
+                val targetClass = classId.trim()
+                val filteredList = importedList.filter { it.first.currentClass.trim().equals(targetClass, ignoreCase = true) }
+                
+                if (filteredList.isNotEmpty()) {
+                    withContext(Dispatchers.IO) {
+                        dao.insertStudents(filteredList.map { it.first })
+                        filteredList.mapNotNull { it.second }.forEach { dao.upsertProfile(it) }
+                    }
+                    withContext(Dispatchers.Main) {
+                        android.widget.Toast.makeText(context, "成功匯入 ${filteredList.size} 位學生", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        android.widget.Toast.makeText(context, "未找到符合 ${classId} 班的學生資料", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    android.widget.Toast.makeText(context, "匯入失敗: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                }
+            } finally {
+                _isImporting.value = false
+            }
+        }
+    }
+
     fun promoteAllStudents() {
         viewModelScope.launch(Dispatchers.IO) {
             val currentList = students.value

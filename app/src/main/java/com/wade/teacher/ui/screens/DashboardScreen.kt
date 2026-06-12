@@ -596,14 +596,38 @@ fun HomeroomDashboard(
 ) {
     val schoolConfig by viewModel.schoolConfig.collectAsState()
     val students by viewModel.homeroomStudents.collectAsState()
+    val isImporting by viewModel.isImporting.collectAsState()
+    val context = LocalContext.current
     val classId = schoolConfig.homeroomClass
+    
+    val studentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        android.util.Log.e("HomeroomImport", "File picker callback triggered with URI: $uri")
+        if (uri != null) {
+            viewModel.importStudentsForClass(context, uri, classId)
+        } else {
+            android.util.Log.e("HomeroomImport", "File selection cancelled or null URI")
+        }
+    }
     
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp)
     ) {
         item {
-            Text("導師班級：$classId 班", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("導師班級：$classId 班", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.weight(1f))
+                if (isImporting) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                } else {
+                    IconButton(onClick = { 
+                        android.util.Log.e("HomeroomImport", "Launching file picker for any file")
+                        studentPicker.launch(arrayOf("*/*")) 
+                    }) {
+                        Icon(Icons.Default.Add, contentDescription = "匯入班級學生")
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(12.dp))
         }
         
