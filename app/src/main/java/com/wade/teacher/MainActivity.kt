@@ -11,10 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.wade.teacher.ui.screens.RoleSelectorScreen
-import com.wade.teacher.ui.screens.DashboardScreen
-import com.wade.teacher.ui.screens.StudentDetailScreen
-import com.wade.teacher.ui.screens.MoodCheckScreen
+import com.wade.teacher.ui.screens.*
 import com.wade.teacher.ui.theme.TaiwanTeacherAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -52,6 +49,21 @@ fun TeacherAppNavigation() {
                 },
                 onNavigateToMoodCheck = {
                     navController.navigate("mood_check")
+                },
+                onNavigateToResources = {
+                    navController.navigate("external_resources")
+                },
+                onNavigateToLessonPlans = {
+                    navController.navigate("lesson_plans")
+                },
+                onNavigateToTagging = { classId ->
+                    navController.navigate("class_tagging/$classId")
+                },
+                onNavigateToAssignments = { classId ->
+                    navController.navigate("assignments/$classId")
+                },
+                onNavigateToAnalysis = { classId ->
+                    navController.navigate("grade_analysis/$classId")
                 }
             )
         }
@@ -67,6 +79,37 @@ fun TeacherAppNavigation() {
         composable("mood_check") {
             MoodCheckScreen(
                 viewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("external_resources") {
+            ExternalResourceScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("lesson_plans") {
+            LessonPlanScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("class_tagging/{classId}") { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            ClassroomTaggingScreen(
+                classId = classId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("assignments/{classId}") { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            AssignmentManagementScreen(
+                classId = classId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("grade_analysis/{classId}") { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            GradeAnalysisScreen(
+                classId = classId,
                 onBack = { navController.popBackStack() }
             )
         }
