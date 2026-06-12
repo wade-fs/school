@@ -1,0 +1,10 @@
+services:
+  builder:
+    build: .
+    volumes:
+      - .:/app
+    # 自動將宿主機的 UID/GID 傳入容器，避免產出檔案權限問題
+    environment:
+      - UID=${UID:-1000}
+      - GID=${GID:-1000}
+    command: /bin/bash

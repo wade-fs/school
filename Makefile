@@ -1,30 +1,25 @@
-.PHONY: clean build rebuild rebuild-no-daemon
+.PHONY: clean build debug release setup
 
-# Clean up all build and cache directories aggressively
+# 初始化發布目錄
+setup:
+	mkdir -p release
+
+# 清理環境
 clean:
-	@echo "--- Aggressively cleaning build and cache directories ---"
-	./gradlew --stop
-	rm -rf .gradle
-	rm -rf app/.gradle
-	rm -rf build
-	rm -rf app/build
+	@echo "--- Cleaning project ---"
 	./gradlew clean
+	rm -rf release/*.apk
 
-# Standard debug build
+# 本地編譯 (如果不使用 Docker)
 build:
-	@echo "--- Running standard debug build ---"
 	./gradlew assembleDebug
 
-# Clean and build
-rebuild: clean build
+# 使用 Docker 編譯 Debug APK
+debug: setup
+	@echo "--- Building Debug APK in Docker ---"
+	docker compose run --rm builder bash -c "./gradlew assembleDebug && cp app/build/outputs/apk/debug/*.apk ./release/"
 
-# Clean and build without daemon (useful for avoiding persistent locks)
-rebuild-no-daemon:
-	@echo "--- Rebuilding without daemon to avoid locks ---"
-	./gradlew --stop
-	rm -rf .gradle
-	rm -rf app/.gradle
-	rm -rf build
-	rm -rf app/build
-	./gradlew clean
-	./gradlew assembleDebug --no-daemon
+# 使用 Docker 編譯 Release APK
+release: setup
+	@echo "--- Building Release APK in Docker ---"
+	docker compose run --rm builder bash -c "./gradlew assembleRelease && cp app/build/outputs/apk/release/*.apk ./release/"
