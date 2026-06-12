@@ -52,7 +52,7 @@ object CsvParser {
         return result
     }
 
-    // CSV 格式: classId, subjectName, roomNumber, dayOfWeek, period
+    // CSV 格式: 星期(0), 節次(1), 班級(2), 科目(3), 教室(4)
     fun parseTimetableCsv(inputStream: InputStream): List<TimetableEntry> {
         val result = mutableListOf<TimetableEntry>()
         val reader = BufferedReader(InputStreamReader(inputStream))
@@ -63,11 +63,11 @@ object CsvParser {
                 try {
                     result.add(
                         TimetableEntry(
-                            classId = tokens[0].trim(),
-                            subjectName = tokens[1].trim(),
-                            roomNumber = tokens[2].trim(),
-                            dayOfWeek = tokens[3].trim().toInt(),
-                            period = tokens[4].trim().toInt()
+                            dayOfWeek = tokens[0].trim().toInt(),
+                            period = tokens[1].trim().toInt(),
+                            classId = tokens[2].trim(),
+                            subjectName = tokens[3].trim(),
+                            roomNumber = tokens[4].trim()
                         )
                     )
                 } catch (e: Exception) {

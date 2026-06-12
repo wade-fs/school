@@ -64,8 +64,8 @@ fun DashboardScreen(
             isFetching = isFetching,
             periodTimes = periodTimes,
             onDismiss = { showSettingsDialog = false },
-            onSave = { name, type, website, times ->
-                viewModel.updateSchoolConfig(name, type, website)
+            onSave = { name, type, website, homeroom, times ->
+                viewModel.updateSchoolConfig(name, type, website, homeroom)
                 viewModel.updatePeriodTimes(times)
                 showSettingsDialog = false
             }
@@ -144,6 +144,11 @@ fun DashboardScreen(
                             onNavigateToAssignments = onNavigateToAssignments,
                             onNavigateToAnalysis = onNavigateToAnalysis
                         )
+                        "homeroom" -> HomeroomDashboard(
+                            onNavigateToStudent = onNavigateToStudent,
+                            onNavigateToMoodCheck = onNavigateToMoodCheck,
+                            viewModel = viewModel
+                        )
                         else -> RoleFeatureContent(role = role)
                     }
                 }
@@ -161,11 +166,12 @@ fun SchoolSettingsDialog(
     isFetching: Boolean,
     periodTimes: List<com.wade.teacher.data.local.entity.PeriodTime>,
     onDismiss: () -> Unit,
-    onSave: (String, com.wade.teacher.data.local.entity.SchoolType, String?, List<com.wade.teacher.data.local.entity.PeriodTime>) -> Unit
+    onSave: (String, com.wade.teacher.data.local.entity.SchoolType, String?, String, List<com.wade.teacher.data.local.entity.PeriodTime>) -> Unit
 ) {
     var name by remember { mutableStateOf(config.schoolName) }
     var selectedType by remember { mutableStateOf(config.schoolType) }
     var website by remember { mutableStateOf(config.schoolWebsite) }
+    var homeroom by remember { mutableStateOf(config.homeroomClass) }
     var searchQuery by remember { mutableStateOf("") }
     
     // Period times local state
@@ -185,6 +191,16 @@ fun SchoolSettingsDialog(
                         value = name,
                         onValueChange = { name = it },
                         label = { Text("校名") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = homeroom,
+                        onValueChange = { homeroom = it },
+                        label = { Text("我的導師班級") },
+                        placeholder = { Text("例如: 101") },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -291,7 +307,7 @@ fun SchoolSettingsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(name, selectedType, website, editablePeriodTimes) }) {
+            TextButton(onClick = { onSave(name, selectedType, website, homeroom, editablePeriodTimes) }) {
                 Text("儲存")
             }
         },
@@ -312,8 +328,11 @@ fun CounselingDashboard(
     viewModel: CounselorViewModel
 ) {
     val context = LocalContext.current
-    val studentsWithProfiles by viewModel.studentsWithProfiles.collectAsState()
+    val activeStudents by viewModel.activeCounselingStudents.collectAsState()
+    val allStudents by viewModel.studentsWithProfiles.collectAsState()
     val isImporting by viewModel.isImporting.collectAsState()
+    
+    var showAllStudents by remember { mutableStateOf(false) }
 
     // Mime types for CSV
     val csvMimeTypes = arrayOf("text/csv", "text/comma-separated-values", "application/csv", "*/*")
@@ -325,10 +344,12 @@ fun CounselingDashboard(
     }
 
     var searchQuery by remember { mutableStateOf("") }
+    val baseList = if (showAllStudents || searchQuery.isNotEmpty()) allStudents else activeStudents
+    
     val filteredEntries = if (searchQuery.isBlank()) {
-        studentsWithProfiles
+        baseList
     } else {
-        studentsWithProfiles.filter { entry ->
+        baseList.filter { entry ->
             entry.student.name.contains(searchQuery, ignoreCase = true) || 
             entry.student.studentId.contains(searchQuery) ||
             (entry.profile?.status?.contains(searchQuery, ignoreCase = true) ?: false) ||
@@ -337,7 +358,7 @@ fun CounselingDashboard(
     }
 
     LaunchedEffect(filteredEntries) {
-        android.util.Log.d("CounselingDashboard", "Rendering student list. Total students in DB: ${studentsWithProfiles.size}. Displaying filtered: ${filteredEntries.size}")
+        android.util.Log.d("CounselingDashboard", "Rendering student list. Total students in DB: ${allStudents.size}. Displaying filtered: ${filteredEntries.size}")
     }
 
     LazyColumn(
@@ -404,7 +425,7 @@ fun CounselingDashboard(
             if (lastSession != null) {
                 val alerts by viewModel.getClassMoodAlerts(lastSession!!.classId).collectAsState(emptyList())
                 if (alerts.isNotEmpty()) {
-                    val alertNames = alerts.map { id -> studentsWithProfiles.find { it.student.studentId == id }?.student?.name ?: id }
+                    val alertNames = alerts.map { id -> allStudents.find { it.student.studentId == id }?.student?.name ?: id }
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
@@ -430,7 +451,7 @@ fun CounselingDashboard(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("今日晤談 (${todayAppointments.size})", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 todayAppointments.forEach { appointment ->
-                    val studentName = studentsWithProfiles.find { it.student.studentId == appointment.studentId }?.student?.name ?: appointment.studentId
+                    val studentName = allStudents.find { it.student.studentId == appointment.studentId }?.student?.name ?: appointment.studentId
                     val timeStr = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(appointment.scheduledAt))
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -452,8 +473,8 @@ fun CounselingDashboard(
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedButton(
                 onClick = { 
-                    if (studentsWithProfiles.isNotEmpty()) {
-                        val entry = studentsWithProfiles.first()
+                    if (allStudents.isNotEmpty()) {
+                        val entry = allStudents.first()
                         viewModel.setStudentStatus(entry.student.studentId, "Active", "法院審理中", "High")
                         viewModel.toggleKeyTracking(entry.student.studentId)
                         viewModel.scheduleAppointment(entry.student.studentId, System.currentTimeMillis() + 86400000)
@@ -474,18 +495,29 @@ fun CounselingDashboard(
                 color = MaterialTheme.colorScheme.background
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("搜尋姓名、學號、或狀態") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                        trailingIcon = if (searchQuery.isNotEmpty()) {
-                            { IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Clear, contentDescription = null) } }
-                        } else null,
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.medium
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text("搜尋姓名、學號、或狀態") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                            trailingIcon = if (searchQuery.isNotEmpty()) {
+                                { IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Clear, contentDescription = null) } }
+                            } else null,
+                            singleLine = true,
+                            shape = MaterialTheme.shapes.medium
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        FilterChip(
+                            selected = showAllStudents,
+                            onClick = { showAllStudents = !showAllStudents },
+                            label = { Text("顯示全校") },
+                            leadingIcon = if (showAllStudents) {
+                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            } else null
+                        )
+                    }
                     
                     Spacer(modifier = Modifier.height(8.dp))
                     
@@ -506,7 +538,11 @@ fun CounselingDashboard(
 
         // Student List
         item {
-            val listTitle = if (searchQuery.isEmpty()) "重點追蹤與全體學生" else "搜尋結果 (${filteredEntries.size})"
+            val listTitle = when {
+                searchQuery.isNotEmpty() -> "搜尋結果 (${filteredEntries.size})"
+                showAllStudents -> "全校學生清單 (${allStudents.size})"
+                else -> "重點關注個案 (${activeStudents.size})"
+            }
             Text(
                 text = listTitle,
                 style = MaterialTheme.typography.titleMedium,
@@ -530,7 +566,7 @@ fun CounselingDashboard(
             item {
                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        if (studentsWithProfiles.isEmpty()) "尚未匯入學生資料" else "找不到符合的學生",
+                        if (allStudents.isEmpty()) "尚未匯入學生資料" else "找不到符合的學生",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -544,3 +580,58 @@ fun CounselingDashboard(
     }
 }
 
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeroomDashboard(
+    onNavigateToStudent: (String, String) -> Unit,
+    onNavigateToMoodCheck: () -> Unit,
+    viewModel: CounselorViewModel
+) {
+    val schoolConfig by viewModel.schoolConfig.collectAsState()
+    val students by viewModel.homeroomStudents.collectAsState()
+    
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp)
+    ) {
+        item {
+            Text("導師班級：${schoolConfig.homeroomClass} 班", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        
+        item {
+            DashboardActionCard(
+                title = "班級心情溫度計",
+                description = "掌握班級整體心理健康狀態",
+                actionText = "開始施測",
+                onClick = onNavigateToMoodCheck
+            )
+        }
+        
+        item {
+            Text("學生清單 (${students.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 12.dp))
+        }
+        
+        if (students.isEmpty()) {
+            item {
+                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    Text("尚未匯入班級學生資料", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        
+        items(students) { student ->
+            DashboardActionCard(
+                title = "${student.seatNo} 號 - ${student.name}",
+                description = "學號：${student.studentId} | 性別：${student.gender}",
+                actionText = "查看詳情",
+                onClick = { onNavigateToStudent(student.studentId, student.name) }
+            )
+        }
+        
+        item {
+            Spacer(modifier = Modifier.height(80.dp))
+        }
+    }
+}

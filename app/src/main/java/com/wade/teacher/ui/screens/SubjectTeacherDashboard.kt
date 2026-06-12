@@ -3,6 +3,7 @@ package com.wade.teacher.ui.screens
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -36,7 +38,11 @@ fun SubjectTeacherDashboard(
     val allClassIds by viewModel.allClassIds.collectAsState()
     val selectedClassId by viewModel.selectedClassId.collectAsState()
     val isImporting by viewModel.isImporting.collectAsState()
+    val fullTimetable by viewModel.fullTimetable.collectAsState()
+    val periodTimes by viewModel.periodTimes.collectAsState()
     val selectedClass = assignedClasses.find { it.classId == selectedClassId }
+
+    var showTimetableDialog by remember { mutableStateOf(false) }
 
     // Observe students for selected class properly in the composable scope
     val studentsInClass by remember(selectedClassId) {
@@ -72,6 +78,9 @@ fun SubjectTeacherDashboard(
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 } else {
                     Row {
+                        IconButton(onClick = { showTimetableDialog = true }) {
+                            Icon(Icons.Default.GridView, contentDescription = "查看課表", tint = MaterialTheme.colorScheme.primary)
+                        }
                         IconButton(onClick = { studentPicker.launch(csvMimeTypes) }) {
                             Icon(Icons.Default.PersonAdd, contentDescription = "匯入學生", tint = MaterialTheme.colorScheme.primary)
                         }
@@ -90,7 +99,15 @@ fun SubjectTeacherDashboard(
         // Horizontal Class Switcher (1-A)
         if (classChips.isNotEmpty()) {
             item {
-                Text("授課班級視角", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("授課班級視角", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.weight(1f))
+                    TextButton(onClick = { showTimetableDialog = true }) {
+                        Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("查看完整週課表", fontSize = 12.sp)
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier
@@ -132,6 +149,19 @@ fun SubjectTeacherDashboard(
                         Text("${selectedClass.classId} 班 - ${selectedClass.subjectName}", style = MaterialTheme.typography.titleMedium)
                         Text("教室: ${selectedClass.roomNumber} | 學生: ${selectedClass.studentCount} 位")
                         Text("下一堂課: ${selectedClass.nextLessonTime ?: "未排定"}", color = MaterialTheme.colorScheme.primary)
+                        
+                        // New: Small preview of class schedule
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("本班授課節次:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        val classSchedule = fullTimetable.filter { it.classId == selectedClass.classId }
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            classSchedule.forEach { entry ->
+                                SuggestionChip(
+                                    onClick = { },
+                                    label = { Text("週${entry.dayOfWeek} 第${entry.period}節", fontSize = 10.sp) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -182,5 +212,18 @@ fun SubjectTeacherDashboard(
         item {
             Spacer(modifier = Modifier.height(80.dp))
         }
+    }
+
+    if (showTimetableDialog) {
+        AlertDialog(
+            onDismissRequest = { showTimetableDialog = false },
+            title = { Text("個人週課表") },
+            text = {
+                WeeklyTimetableGrid(fullTimetable, periodTimes)
+            },
+            confirmButton = {
+                TextButton(onClick = { showTimetableDialog = false }) { Text("關閉") }
+            }
+        )
     }
 }

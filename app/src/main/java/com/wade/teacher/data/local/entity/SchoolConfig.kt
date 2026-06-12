@@ -9,5 +9,6 @@ enum class SchoolType {
 data class SchoolConfig(
     val schoolName: String = "新北市立清水高級中學",
     val schoolType: SchoolType = SchoolType.COMPREHENSIVE,
-    val schoolWebsite: String? = null
+    val schoolWebsite: String? = null,
+    val homeroomClass: String = "101" // 預設導師班級
 )

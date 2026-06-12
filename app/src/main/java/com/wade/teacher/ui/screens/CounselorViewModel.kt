@@ -27,6 +27,17 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     val studentsWithProfiles: StateFlow<List<StudentWithProfile>> = dao.getAllStudentsWithProfiles()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // ── 角色篩選後的學生資料 ──────────────────────────────────────────────────
+    
+    // 輔導老師：僅顯示有輔導紀錄或重點追蹤的學生
+    val activeCounselingStudents: StateFlow<List<StudentWithProfile>> = dao.getStudentsWithActiveProfiles()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // 導師：僅顯示導師班級的學生
+    val homeroomStudents: StateFlow<List<Student>> = combine(dao.getAllStudents(), schoolConfigFlow()) { list, config ->
+        list.filter { it.currentClass == config.homeroomClass }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val students: StateFlow<List<Student>> = dao.getAllStudents()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -40,6 +51,8 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     // ── 學校設定 ──────────────────────────────────────────────────────────────
     private val _schoolConfig = MutableStateFlow(SchoolConfig())
     val schoolConfig: StateFlow<SchoolConfig> = _schoolConfig
+    
+    private fun schoolConfigFlow() = _schoolConfig
 
     // 教育部學校清單 (未來可接 API，目前為靜態示範資料)
     private val _moeSchools = MutableStateFlow<List<MoeSchool>>(emptyList())
@@ -79,8 +92,13 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         )
     }
 
-    fun updateSchoolConfig(name: String, type: SchoolType, website: String? = null) {
-        _schoolConfig.value = SchoolConfig(name, type, website)
+    fun updateSchoolConfig(name: String, type: SchoolType, website: String? = null, homeroom: String? = null) {
+        _schoolConfig.value = SchoolConfig(
+            schoolName = name, 
+            schoolType = type, 
+            schoolWebsite = website,
+            homeroomClass = homeroom ?: _schoolConfig.value.homeroomClass
+        )
     }
 
     fun updatePeriodTimes(times: List<PeriodTime>) {

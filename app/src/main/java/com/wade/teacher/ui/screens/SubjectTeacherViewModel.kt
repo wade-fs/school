@@ -53,6 +53,13 @@ class SubjectTeacherViewModel(application: Application) : AndroidViewModel(appli
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Raw timetable for grid view
+    val fullTimetable: StateFlow<List<TimetableEntry>> = dao.getFullTimetable()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val periodTimes: StateFlow<List<com.wade.teacher.data.local.entity.PeriodTime>> = dao.getPeriodTimes()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     // 從學生資料直接推導所有班級（不依賴課表）
     val allClassIds: StateFlow<List<String>> = dao.getAllStudents()
         .map { students -> students.map { s -> s.currentClass }.distinct().sorted() }

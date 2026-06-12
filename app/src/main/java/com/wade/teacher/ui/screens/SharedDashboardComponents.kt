@@ -13,6 +13,72 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.Color
+
+@Composable
+fun WeeklyTimetableGrid(
+    entries: List<com.wade.teacher.data.local.entity.TimetableEntry>,
+    periods: List<com.wade.teacher.data.local.entity.PeriodTime>
+) {
+    val days = listOf("一", "二", "三", "四", "五")
+    val periodsToUse = if (periods.isNotEmpty()) periods else (1..8).map { com.wade.teacher.data.local.entity.PeriodTime(period = it, startTime = "", endTime = "") }
+
+    Column(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+        // Header Row
+        Row {
+            Box(modifier = Modifier.size(50.dp, 40.dp), contentAlignment = Alignment.Center) {
+                Text("節次", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+            days.forEach { day ->
+                Box(modifier = Modifier.size(80.dp, 40.dp), contentAlignment = Alignment.Center) {
+                    Text(day, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+        }
+        
+        periodsToUse.forEach { pt ->
+            Row {
+                Box(modifier = Modifier.size(50.dp, 60.dp), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("${pt.period}", fontWeight = FontWeight.Bold)
+                        if (pt.startTime.isNotEmpty()) {
+                            Text(pt.startTime, fontSize = 9.sp, color = Color.Gray)
+                        }
+                    }
+                }
+                
+                (1..5).forEach { dayIndex ->
+                    val entry = entries.find { it.dayOfWeek == dayIndex && it.period == pt.period }
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp, 60.dp)
+                            .padding(2.dp)
+                            .background(
+                                if (entry != null) MaterialTheme.colorScheme.primaryContainer 
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                MaterialTheme.shapes.extraSmall
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (entry != null) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(entry.subjectName, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(entry.classId, fontSize = 10.sp)
+                                if (entry.roomNumber.isNotEmpty()) {
+                                    Text(entry.roomNumber, fontSize = 9.sp, color = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun DashboardActionCard(title: String, description: String, actionText: String, onClick: () -> Unit = {}) {
     Card(
@@ -44,13 +110,35 @@ fun SubjectClassSwitcher(
 ) {
     // Correctly collect the Flow as State
     val assignedClasses by viewModel.assignedClasses.collectAsState(initial = emptyList())
+    val fullTimetable by viewModel.fullTimetable.collectAsState()
+    val periodTimes by viewModel.periodTimes.collectAsState()
+    var showGrid by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("科任班級管理", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("科任班級管理", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.weight(1f))
+            TextButton(onClick = { showGrid = true }) {
+                Text("週課表總覽")
+            }
+        }
         Spacer(modifier = Modifier.height(12.dp))
         
         assignedClasses.forEach { sc ->
             ClassCard(sc.classId, sc.subjectName, "下一堂課: ${sc.nextLessonTime}")
+        }
+        
+        if (showGrid) {
+            AlertDialog(
+                onDismissRequest = { showGrid = false },
+                title = { Text("個人週課表") },
+                text = {
+                    WeeklyTimetableGrid(fullTimetable, periodTimes)
+                },
+                confirmButton = {
+                    TextButton(onClick = { showGrid = false }) { Text("關閉") }
+                }
+            )
         }
     }
 }
