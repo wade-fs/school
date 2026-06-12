@@ -53,6 +53,11 @@ class SubjectTeacherViewModel(application: Application) : AndroidViewModel(appli
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // 從學生資料直接推導所有班級（不依賴課表）
+    val allClassIds: StateFlow<List<String>> = dao.getAllStudents()
+        .map { students -> students.map { s -> s.currentClass }.distinct().sorted() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     init {
         // Initial selection if empty
         viewModelScope.launch {

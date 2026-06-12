@@ -8,9 +8,9 @@ data class ClassroomPerformance(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val studentId: String,
     val classId: String,
-    val tagName: String,       // "發言踴躍" / "小組領導" / "未帶課本" / "作業遲交"
-    val timestamp: Long = System.currentTimeMillis(),
+    val tagName: String,       // 例如 "發言積極" / "需加強"
     val academicYear: Int,
     val semester: Int,
-    val note: String? = null
+    val note: String? = null,
+    val createdAt: Long = System.currentTimeMillis()
 )

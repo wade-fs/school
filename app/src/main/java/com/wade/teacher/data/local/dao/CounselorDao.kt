@@ -6,9 +6,13 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CounselorDao {
-    // Students (Academic)
+
+    // ── Students ─────────────────────────────────────────────────────────────
     @Query("SELECT * FROM students ORDER BY studentId ASC")
     fun getAllStudents(): Flow<List<Student>>
+
+    @Query("SELECT * FROM students WHERE currentClass = :classId ORDER BY seatNo ASC")
+    fun getStudentsByClass(classId: String): Flow<List<Student>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertStudents(students: List<Student>)
@@ -19,7 +23,7 @@ interface CounselorDao {
     @Query("DELETE FROM students")
     suspend fun deleteAllStudents()
 
-    // Counseling Profiles
+    // ── Counseling Profiles ───────────────────────────────────────────────────
     @Transaction
     @Query("SELECT * FROM students ORDER BY studentId ASC")
     fun getAllStudentsWithProfiles(): Flow<List<StudentWithProfile>>
@@ -30,7 +34,7 @@ interface CounselorDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertProfile(profile: CounselingProfile)
 
-    // Case Logs
+    // ── Case Logs ─────────────────────────────────────────────────────────────
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLog(log: CaseLog): Long
 
@@ -40,7 +44,7 @@ interface CounselorDao {
     @Query("DELETE FROM case_logs WHERE id = :id")
     suspend fun deleteLog(id: Int)
 
-    // Tags
+    // ── Tags ──────────────────────────────────────────────────────────────────
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTag(tag: CaseTag): Long
 
@@ -55,34 +59,21 @@ interface CounselorDao {
     @Query("SELECT * FROM case_tags JOIN case_log_tags ON case_tags.id = case_log_tags.tagId WHERE caseLogId = :logId")
     fun getTagsForLog(logId: Int): Flow<List<CaseTag>>
 
-    // Appointments
+    // ── Appointments ──────────────────────────────────────────────────────────
     @Query("SELECT * FROM appointments WHERE scheduledAt >= :startOfDay ORDER BY scheduledAt ASC")
     fun getUpcomingAppointments(startOfDay: Long): Flow<List<Appointment>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAppointment(appointment: Appointment)
 
-    // Crisis Events
+    // ── Crisis Events ─────────────────────────────────────────────────────────
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCrisisEvent(event: CrisisEvent)
 
     @Query("SELECT * FROM crisis_events WHERE studentId = :studentId ORDER BY occurredAt DESC")
     fun getCrisisEventsForStudent(studentId: String): Flow<List<CrisisEvent>>
 
-    // Counselor-Teacher Notes
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertCounselorNote(note: CounselorTeacherNote)
-
-    @Query("SELECT * FROM counselor_teacher_notes WHERE toTeacherId = :teacherId AND isRead = 0")
-    fun getUnreadNotesForTeacher(teacherId: String): Flow<List<CounselorTeacherNote>>
-
-    @Query("SELECT * FROM counselor_teacher_notes WHERE studentId = :studentId ORDER BY createdAt DESC")
-    fun getNotesForStudent(studentId: String): Flow<List<CounselorTeacherNote>>
-
-    @Query("UPDATE counselor_teacher_notes SET isRead = 1 WHERE id = :id")
-    suspend fun markNoteAsRead(id: Int)
-
-    // Mood Checks
+    // ── Mood Checks ───────────────────────────────────────────────────────────
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMoodCheckSession(session: MoodCheckSession): Long
 
@@ -98,24 +89,32 @@ interface CounselorDao {
     @Query("SELECT * FROM mood_check_sessions ORDER BY conductedAt DESC LIMIT 1")
     fun getLastSession(): Flow<MoodCheckSession?>
 
-    // External Resources
-    @Query("SELECT * FROM external_resources")
-    fun getExternalResources(): Flow<List<ExternalResource>>
-
+    // ── External Resources ────────────────────────────────────────────────────
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertExternalResource(resource: ExternalResource)
 
-    // Audit Logs
+    @Query("SELECT * FROM external_resources")
+    fun getExternalResources(): Flow<List<ExternalResource>>
+
+    // ── Audit Logs ────────────────────────────────────────────────────────────
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAuditLog(log: AuditLog)
 
-    @Query("SELECT * FROM audit_logs ORDER BY performedAt DESC LIMIT 200")
-    fun getRecentAuditLogs(): Flow<List<AuditLog>>
+    // ── PeriodTime ─────────────────────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertPeriodTimes(times: List<PeriodTime>)
 
+    @Query("SELECT * FROM period_times ORDER BY period ASC")
+    fun getPeriodTimes(): Flow<List<PeriodTime>>
+
+    @Query("DELETE FROM period_times")
+    suspend fun deleteAllPeriodTimes()
+
+    // ── AuditLog ──────────────────────────────────────────────────────────────
     @Query("SELECT * FROM audit_logs ORDER BY performedAt DESC")
     fun getAllAuditLogs(): Flow<List<AuditLog>>
 
-    // Timetable
+    // ── Timetable ─────────────────────────────────────────────────────────────
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTimetableEntries(entries: List<TimetableEntry>)
 
@@ -125,59 +124,58 @@ interface CounselorDao {
     @Query("DELETE FROM timetable_entries")
     suspend fun deleteFullTimetable()
 
-    // Period Times
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertPeriodTimes(times: List<PeriodTime>)
-
-    @Query("SELECT * FROM period_times ORDER BY period ASC")
-    fun getPeriodTimes(): Flow<List<PeriodTime>>
-
-    // Lesson Plans
+    // ── Lesson Plans ──────────────────────────────────────────────────────────
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLessonPlan(plan: LessonPlan): Long
 
     @Query("SELECT * FROM lesson_plans ORDER BY createdAt DESC")
     fun getAllLessonPlans(): Flow<List<LessonPlan>>
 
+    // ── Learning Materials ────────────────────────────────────────────────────
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLearningMaterial(material: LearningMaterial)
 
     @Query("SELECT * FROM learning_materials WHERE lessonPlanId = :planId")
     fun getMaterialsForPlan(planId: Int): Flow<List<LearningMaterial>>
 
-    // Classroom Performance
-    @Insert
-    suspend fun insertClassroomPerformance(perf: ClassroomPerformance)
-
-    @Query("SELECT * FROM classroom_performances WHERE studentId = :studentId ORDER BY timestamp DESC")
-    fun getPerformanceForStudent(studentId: String): Flow<List<ClassroomPerformance>>
-
-    @Query("SELECT * FROM classroom_performances WHERE classId = :classId ORDER BY timestamp DESC")
-    fun getPerformanceForClass(classId: String): Flow<List<ClassroomPerformance>>
-
-    // Assignments
+    // ── Assignments ───────────────────────────────────────────────────────────
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAssignment(assignment: Assignment): Long
 
-    @Query("SELECT * FROM assignments WHERE classId = :classId ORDER BY createdAt DESC")
+    @Query("SELECT * FROM assignments WHERE classId = :classId ORDER BY dueDate ASC")
     fun getAssignmentsForClass(classId: String): Flow<List<Assignment>>
 
-    @Query("SELECT * FROM assignments ORDER BY createdAt DESC")
+    @Query("SELECT * FROM assignments ORDER BY dueDate ASC")
     fun getAllAssignments(): Flow<List<Assignment>>
 
+    // ── Submissions ───────────────────────────────────────────────────────────
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSubmissions(submissions: List<Submission>)
-
-    @Query("SELECT * FROM submissions WHERE assignmentId = :assignmentId")
-    fun getSubmissionsForAssignment(assignmentId: Int): Flow<List<Submission>>
 
     @Update
     suspend fun updateSubmission(submission: Submission)
 
-    @Query("SELECT * FROM students WHERE currentClass = :classId ORDER BY seatNo ASC")
-    fun getStudentsByClass(classId: String): Flow<List<Student>>
+    @Query("SELECT * FROM submissions WHERE assignmentId = :assignmentId ORDER BY studentId ASC")
+    fun getSubmissionsForAssignment(assignmentId: Int): Flow<List<Submission>>
 
-    @Query("SELECT s.* FROM submissions s INNER JOIN assignments a ON s.assignmentId = a.id WHERE a.classId = :classId")
+    @Query("""
+        SELECT s.* FROM submissions s
+        INNER JOIN assignments a ON s.assignmentId = a.id
+        WHERE a.classId = :classId
+    """)
     fun getAllSubmissionsByClass(classId: String): Flow<List<Submission>>
 
+    // ── Classroom Performance ─────────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertClassroomPerformance(performance: ClassroomPerformance)
+
+    @Query("SELECT * FROM classroom_performances WHERE studentId = :studentId AND classId = :classId ORDER BY createdAt DESC")
+    fun getPerformanceForStudent(studentId: String, classId: String): Flow<List<ClassroomPerformance>>
+
+    // ── Counselor Teacher Notes ───────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCounselorNote(note: CounselorTeacherNote)
+
+    @Query("SELECT * FROM counselor_teacher_notes WHERE studentId = :studentId ORDER BY createdAt DESC")
+    fun getNotesForStudent(studentId: String): Flow<List<CounselorTeacherNote>>
 }

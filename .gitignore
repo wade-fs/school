@@ -55,3 +55,4 @@ Thumbs.db
 # Note: It's often recommended to commit gradle-wrapper.jar, 
 # but if you prefer a lean repo, you can ignore it.
 # gradle/wrapper/gradle-wrapper.jar
+*.txt
