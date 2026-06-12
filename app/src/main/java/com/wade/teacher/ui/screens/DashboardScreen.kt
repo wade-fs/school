@@ -6,10 +6,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,8 +35,8 @@ fun DashboardScreen(
     val viewModel: CounselorViewModel = viewModel()
     val schoolConfig by viewModel.schoolConfig.collectAsState()
     val roleTitle = roles.find { it.id == role }?.title ?: "未知角色"
-    var selectedTabIndex by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
-    var showSettingsDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
 
     if (showSettingsDialog) {
         SchoolSettingsDialog(
@@ -133,8 +130,8 @@ fun SchoolSettingsDialog(
     onDismiss: () -> Unit,
     onSave: (String, com.wade.teacher.data.local.entity.SchoolType) -> Unit
 ) {
-    var name by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(config.schoolName) }
-    var selectedType by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(config.schoolType) }
+    var name by remember { mutableStateOf(config.schoolName) }
+    var selectedType by remember { mutableStateOf(config.schoolType) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -195,7 +192,7 @@ fun CounselingDashboard(
         uri?.let { viewModel.importCsv(context, it) }
     }
 
-    var searchQuery by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
     val filteredEntries = if (searchQuery.isBlank()) {
         studentsWithProfiles
     } else {
@@ -232,7 +229,7 @@ fun CounselingDashboard(
         val lastResponses by if (lastSession != null) {
             viewModel.getResponsesForSession(lastSession!!.id).collectAsState(emptyList())
         } else {
-            androidx.compose.runtime.remember { mutableStateOf(emptyList<com.wade.teacher.data.local.entity.MoodCheckResponse>()) }
+            remember { mutableStateOf(emptyList<com.wade.teacher.data.local.entity.MoodCheckResponse>()) }
         }
 
         val moodDesc = if (lastSession != null) {

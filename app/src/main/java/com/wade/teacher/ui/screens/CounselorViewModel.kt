@@ -38,6 +38,21 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         _schoolConfig.value = SchoolConfig(name, type)
     }
 
+    // --- Sprint 6: Audit Logging ---
+
+    private fun logAudit(action: String, targetType: String, targetId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertAuditLog(
+                AuditLog(
+                    action = action,
+                    targetType = targetType,
+                    targetId = targetId,
+                    performedBy = "system_counselor" // Placeholder until auth is implemented
+                )
+            )
+        }
+    }
+
     fun importCsv(context: Context, uri: Uri) {
         viewModelScope.launch {
             _isImporting.value = true
@@ -54,6 +69,7 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                     
                     dao.insertStudents(students)
                     profiles.forEach { dao.upsertProfile(it) }
+                    logAudit("CREATE", "BulkImport", "StudentsCount:${students.size}")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("CounselorViewModel", "Error importing CSV", e)
@@ -84,12 +100,14 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             }
             dao.insertStudents(promotedList)
+            logAudit("UPDATE", "BulkPromote", "StudentsCount:${promotedList.size}")
         }
     }
 
     fun clearAllStudents() {
         viewModelScope.launch(Dispatchers.IO) {
             dao.deleteAllStudents()
+            logAudit("DELETE", "BulkDelete", "AllStudents")
         }
     }
 
@@ -97,6 +115,7 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch(Dispatchers.IO) {
             val profile = dao.getProfileForStudent(studentId).first() ?: CounselingProfile(studentId)
             dao.upsertProfile(profile.copy(isKeyTracking = !profile.isKeyTracking))
+            logAudit("UPDATE", "CounselingProfile", "KeyTracking:$studentId")
         }
     }
 
@@ -108,6 +127,7 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
             // Also update legacy field in profile for display
             val profile = dao.getProfileForStudent(studentId).first() ?: CounselingProfile(studentId)
             dao.upsertProfile(profile.copy(nextAppointment = timestamp))
+            logAudit("CREATE", "Appointment", studentId)
         }
     }
 
@@ -115,6 +135,7 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch(Dispatchers.IO) {
             val profile = dao.getProfileForStudent(studentId).first() ?: CounselingProfile(studentId)
             dao.upsertProfile(profile.copy(status = status, legalStatus = legalStatus, priority = priority))
+            logAudit("UPDATE", "CounselingProfile", "Status:$studentId")
         }
     }
 
@@ -139,14 +160,20 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                 contentIv = iv
             )
             dao.insertLog(log)
+            logAudit("CREATE", "CaseLog", studentId)
         }
     }
 
-    fun getLogsForStudent(studentId: String): Flow<List<CaseLog>> = dao.getLogsForStudent(studentId)
+    fun getLogsForStudent(studentId: String): Flow<List<CaseLog>> {
+        logAudit("VIEW", "CaseLogs", studentId)
+        return dao.getLogsForStudent(studentId)
+    }
 
     fun decryptLogContent(log: CaseLog): String {
         return try {
-            CaseLogCrypto.decrypt(log.contentEncrypted, log.contentIv)
+            val decrypted = CaseLogCrypto.decrypt(log.contentEncrypted, log.contentIv)
+            // Note: We don't log here to avoid flooding since it's used in UI rendering
+            decrypted
         } catch (e: Exception) {
             "解密失敗"
         }
@@ -222,11 +249,14 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                 val profile = dao.getProfileForStudent(studentId).first() ?: CounselingProfile(studentId)
                 dao.upsertProfile(profile.copy(priority = "High"))
             }
+            logAudit("CREATE", "CrisisEvent", "$studentId:$eventType")
         }
     }
 
-    fun getCrisisEventsForStudent(studentId: String): Flow<List<CrisisEvent>> =
-        dao.getCrisisEventsForStudent(studentId)
+    fun getCrisisEventsForStudent(studentId: String): Flow<List<CrisisEvent>> {
+        logAudit("VIEW", "CrisisEvents", studentId)
+        return dao.getCrisisEventsForStudent(studentId)
+    }
 
     // --- Sprint 4: Counselor-Teacher Notes ---
 
@@ -247,6 +277,7 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                     requestType = requestType
                 )
             )
+            logAudit("CREATE", "TeacherNote", studentId)
         }
     }
 

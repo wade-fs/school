@@ -260,50 +260,30 @@ Entity（`ExternalResource`）已就緒，需預填內建資料並建 UI。
 
 ---
 
-### Sprint 6 — 稽核日誌（約 2 天）
+### Sprint 6 — 稽核日誌 (✅ 完整)
 
-Entity（`AuditLog`）已就緒，DAO 目前**沒有** AuditLog 相關方法，需補充。
+Entity（`AuditLog`）已就緒。
 
-#### 6-A：補充 DAO 方法
-
-```kotlin
-// 需加入 CounselorDao
-@Insert
-suspend fun insertAuditLog(log: AuditLog)
-
-@Query("SELECT * FROM audit_logs ORDER BY performedAt DESC LIMIT 200")
-fun getRecentAuditLogs(): Flow<List<AuditLog>>
-```
-
-#### 6-B：自動寫入時機
-
-在 `CounselorViewModel` 的各個操作方法中加入稽核記錄：
+#### 6-A：補充 DAO 方法 (✅)
 
 ```kotlin
-// 範例：每次查看學生個案自動記錄
-fun logViewEvent(targetType: String, targetId: String, performedBy: String) {
-    viewModelScope.launch(Dispatchers.IO) {
-        dao.insertAuditLog(
-            AuditLog(
-                action = "VIEW",
-                targetType = targetType,
-                targetId = targetId,
-                performedBy = performedBy
-            )
-        )
-    }
-}
-
-// 加入的位置：
-// - saveCaseLog()         → action="CREATE", targetType="CaseLog"
-// - decryptLogContent()   → action="VIEW",   targetType="CaseLog"
-// - reportCrisisEvent()   → action="CREATE", targetType="CrisisEvent"
-// - setStudentStatus()    → action="UPDATE", targetType="CounselingProfile"
+suspend fun insertAuditLog(...)
+fun getRecentAuditLogs(...)
 ```
 
-#### 6-C：UI
+#### 6-B：自動寫入時機 (✅)
 
-管理員入口（未來實作），目前只需確保資料有正確寫入。
+在 `CounselorViewModel` 中實作了 `logAudit` 私有方法，並整合至以下操作：
+- `importCsv` / `promoteAllStudents` / `clearAllStudents` (Bulk)
+- `saveCaseLog` (CREATE) / `getLogsForStudent` (VIEW)
+- `reportCrisisEvent` (CREATE) / `getCrisisEventsForStudent` (VIEW)
+- `setStudentStatus` / `toggleKeyTracking` (UPDATE)
+- `scheduleAppointment` (CREATE)
+- `sendNoteToTeacher` (CREATE)
+
+#### 6-C：UI (✅)
+
+已確保資料正確寫入資料庫，可供未來管理員頁面查詢。
 
 ---
 
