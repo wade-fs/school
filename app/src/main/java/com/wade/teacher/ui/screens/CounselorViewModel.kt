@@ -128,6 +128,7 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     fun importCsv(context: Context, uri: Uri) {
         viewModelScope.launch {
             _isImporting.value = true
+            android.util.Log.d("CounselorViewModel", "Starting CSV import from URI: $uri")
             try {
                 val importedList = withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri)?.use { inputStream ->
@@ -135,18 +136,26 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                     } ?: emptyList()
                 }
                 
+                android.util.Log.d("CounselorViewModel", "Parsed ${importedList.size} items from CSV")
+                
                 if (importedList.isNotEmpty()) {
                     val students = importedList.map { it.first }
                     val profiles = importedList.mapNotNull { it.second }
                     
-                    dao.insertStudents(students)
-                    profiles.forEach { dao.upsertProfile(it) }
+                    withContext(Dispatchers.IO) {
+                        dao.insertStudents(students)
+                        profiles.forEach { dao.upsertProfile(it) }
+                    }
+                    android.util.Log.d("CounselorViewModel", "Successfully inserted ${students.size} students and ${profiles.size} profiles into DB")
                     logAudit("CREATE", "BulkImport", "StudentsCount:${students.size}")
+                } else {
+                    android.util.Log.w("CounselorViewModel", "Import list is empty")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("CounselorViewModel", "Error importing CSV", e)
             } finally {
                 _isImporting.value = false
+                android.util.Log.d("CounselorViewModel", "CSV import process finished")
             }
         }
     }

@@ -26,6 +26,7 @@ data class SubjectClassInfo(
     val nextLessonTime: String? = null
 )
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class SubjectTeacherViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = AppDatabase.getDatabase(application).counselorDao()
 
@@ -70,16 +71,20 @@ class SubjectTeacherViewModel(application: Application) : AndroidViewModel(appli
     fun importStudents(context: Context, uri: Uri) {
         viewModelScope.launch {
             _isImporting.value = true
+            android.util.Log.d("SubjectTeacherViewModel", "Starting student import from URI: $uri")
             try {
                 val importedList = withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri)?.use { inputStream ->
                         CsvParser.parseStudentCsv(inputStream)
                     } ?: emptyList()
                 }
+                android.util.Log.d("SubjectTeacherViewModel", "Parsed ${importedList.size} students")
                 if (importedList.isNotEmpty()) {
-                    dao.insertStudents(importedList.map { it.first })
-                    // Subject teacher doesn't necessarily handle profiles, but we can save them if present
-                    importedList.mapNotNull { it.second }.forEach { dao.upsertProfile(it) }
+                    withContext(Dispatchers.IO) {
+                        dao.insertStudents(importedList.map { it.first })
+                        importedList.mapNotNull { it.second }.forEach { dao.upsertProfile(it) }
+                    }
+                    android.util.Log.d("SubjectTeacherViewModel", "Successfully inserted students into DB")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SubjectTeacherViewModel", "Error importing students", e)
@@ -92,15 +97,20 @@ class SubjectTeacherViewModel(application: Application) : AndroidViewModel(appli
     fun importSchedule(context: Context, uri: Uri) {
         viewModelScope.launch {
             _isImporting.value = true
+            android.util.Log.d("SubjectTeacherViewModel", "Starting schedule import from URI: $uri")
             try {
                 val entries = withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri)?.use { inputStream ->
                         CsvParser.parseTimetableCsv(inputStream)
                     } ?: emptyList()
                 }
+                android.util.Log.d("SubjectTeacherViewModel", "Parsed ${entries.size} timetable entries")
                 if (entries.isNotEmpty()) {
-                    dao.deleteFullTimetable()
-                    dao.insertTimetableEntries(entries)
+                    withContext(Dispatchers.IO) {
+                        dao.deleteFullTimetable()
+                        dao.insertTimetableEntries(entries)
+                    }
+                    android.util.Log.d("SubjectTeacherViewModel", "Successfully inserted timetable into DB")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SubjectTeacherViewModel", "Error importing schedule", e)
@@ -168,12 +178,13 @@ class SubjectTeacherViewModel(application: Application) : AndroidViewModel(appli
 
     // --- Sprint 3: Assignments ---
 
-    fun createAssignment(classId: String, subjectName: String, title: String, description: String, dueDate: Long) {
+    fun createAssignment(classId: String, subjectName: String, title: String, description: String, dueDate: Long, type: String = "作業") {
         viewModelScope.launch(Dispatchers.IO) {
             val assignment = Assignment(
                 classId = classId,
                 subjectName = subjectName,
                 title = title,
+                type = type,
                 description = description,
                 dueDate = dueDate
             )

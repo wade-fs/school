@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -237,7 +237,7 @@ fun MaterialItem(material: LearningMaterial) {
             },
             trailingContent = {
                 IconButton(onClick = { /* Open URL */ }) {
-                    Icon(Icons.Default.OpenInNew, contentDescription = "開啟")
+                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "開啟")
                 }
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)

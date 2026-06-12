@@ -1,5 +1,6 @@
 package com.wade.teacher.util
 
+import android.util.Log
 import com.wade.teacher.data.local.entity.CounselingProfile
 import com.wade.teacher.data.local.entity.Student
 import com.wade.teacher.data.local.entity.TimetableEntry
@@ -8,14 +9,24 @@ import java.io.InputStream
 import java.io.InputStreamReader
 
 object CsvParser {
+    private const val TAG = "CsvParser"
+
     fun parseStudentCsv(inputStream: InputStream): List<Pair<Student, CounselingProfile?>> {
         val result = mutableListOf<Pair<Student, CounselingProfile?>>()
         val reader = BufferedReader(InputStreamReader(inputStream))
         
         // Skip header
-        val header = reader.readLine() ?: return emptyList()
+        val header = reader.readLine() ?: run {
+            Log.e(TAG, "Empty student CSV file")
+            return emptyList()
+        }
+        Log.d(TAG, "Parsing student CSV with header: $header")
         
+        var lineCount = 0
         reader.forEachLine { line ->
+            lineCount++
+            if (line.isBlank()) return@forEachLine
+            
             val tokens = line.split(",")
             if (tokens.size >= 7) {
                 try {
@@ -47,10 +58,13 @@ object CsvParser {
                     
                     result.add(Pair(student, profile))
                 } catch (e: Exception) {
-                    // Log error or skip invalid line
+                    Log.e(TAG, "Error parsing line $lineCount: $line", e)
                 }
+            } else {
+                Log.w(TAG, "Line $lineCount skipped (insufficient columns ${tokens.size}): $line")
             }
         }
+        Log.d(TAG, "Finished parsing student CSV. Successfully parsed ${result.size} students from $lineCount lines.")
         return result
     }
 
@@ -59,9 +73,17 @@ object CsvParser {
         val reader = BufferedReader(InputStreamReader(inputStream))
         
         // Skip header
-        val header = reader.readLine() ?: return emptyList()
+        val header = reader.readLine() ?: run {
+            Log.e(TAG, "Empty timetable CSV file")
+            return emptyList()
+        }
+        Log.d(TAG, "Parsing timetable CSV with header: $header")
         
+        var lineCount = 0
         reader.forEachLine { line ->
+            lineCount++
+            if (line.isBlank()) return@forEachLine
+            
             val tokens = line.split(",")
             if (tokens.size >= 5) {
                 try {
@@ -73,10 +95,13 @@ object CsvParser {
                         roomNumber = tokens[4].trim()
                     ))
                 } catch (e: Exception) {
-                    // Skip invalid line
+                    Log.e(TAG, "Error parsing timetable line $lineCount: $line", e)
                 }
+            } else {
+                Log.w(TAG, "Line $lineCount skipped (insufficient columns): $line")
             }
         }
+        Log.d(TAG, "Finished parsing timetable. Successfully parsed ${result.size} entries.")
         return result
     }
 
@@ -87,9 +112,17 @@ object CsvParser {
         val reader = BufferedReader(InputStreamReader(inputStream))
         
         // Skip header: 學號,分數,評語
-        val header = reader.readLine() ?: return emptyList()
+        val header = reader.readLine() ?: run {
+            Log.e(TAG, "Empty grade CSV file")
+            return emptyList()
+        }
+        Log.d(TAG, "Parsing grade CSV with header: $header")
         
+        var lineCount = 0
         reader.forEachLine { line ->
+            lineCount++
+            if (line.isBlank()) return@forEachLine
+            
             val tokens = line.split(",")
             if (tokens.size >= 2) {
                 try {
@@ -99,10 +132,13 @@ object CsvParser {
                         feedback = tokens.getOrNull(2)?.trim()
                     ))
                 } catch (e: Exception) {
-                    // Skip invalid line
+                    Log.e(TAG, "Error parsing grade line $lineCount: $line", e)
                 }
+            } else {
+                Log.w(TAG, "Line $lineCount skipped: $line")
             }
         }
+        Log.d(TAG, "Finished parsing grades. Successfully parsed ${result.size} rows.")
         return result
     }
 }

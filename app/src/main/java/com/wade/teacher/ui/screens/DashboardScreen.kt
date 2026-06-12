@@ -336,6 +336,10 @@ fun CounselingDashboard(
         }
     }
 
+    LaunchedEffect(filteredEntries) {
+        android.util.Log.d("CounselingDashboard", "Rendering student list. Total students in DB: ${studentsWithProfiles.size}. Displaying filtered: ${filteredEntries.size}")
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp)

@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,7 +47,7 @@ fun AssignmentManagementScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("$classId 班 - 作業管理") },
+                    title = { Text("$classId 班 - 評量管理") },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -53,7 +55,7 @@ fun AssignmentManagementScreen(
                     },
                     actions = {
                         IconButton(onClick = { showCreateDialog = true }) {
-                            Icon(Icons.Default.Add, contentDescription = "派發作業")
+                            Icon(Icons.Default.Add, contentDescription = "發布評量")
                         }
                     }
                 )
@@ -67,7 +69,7 @@ fun AssignmentManagementScreen(
                 if (assignments.isEmpty()) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("尚未派發作業，點擊右上角「+」開始。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("尚未發布任何評量，點擊右上角「+」開始。", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -80,8 +82,8 @@ fun AssignmentManagementScreen(
         if (showCreateDialog) {
             CreateAssignmentDialog(
                 onDismiss = { showCreateDialog = false },
-                onSave = { title, desc, dueDate ->
-                    viewModel.createAssignment(classId, "物理", title, desc, dueDate)
+                onSave = { title, desc, dueDate, type ->
+                    viewModel.createAssignment(classId, "物理", title, desc, dueDate, type)
                     showCreateDialog = false
                 }
             )
@@ -97,9 +99,22 @@ fun AssignmentCard(assignment: Assignment, onClick: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = assignment.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(text = assignment.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                SuggestionChip(
+                    onClick = { },
+                    label = { Text(assignment.type, fontSize = 10.sp) },
+                    colors = SuggestionChipDefaults.suggestionChipColors(
+                        labelColor = when(assignment.type) {
+                            "期中考", "期末考" -> MaterialTheme.colorScheme.error
+                            "小考" -> MaterialTheme.colorScheme.secondary
+                            else -> MaterialTheme.colorScheme.primary
+                        }
+                    )
+                )
+            }
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = "截止日期: ${dateFormat.format(Date(assignment.dueDate))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Text(text = "截止日期: ${dateFormat.format(Date(assignment.dueDate))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = assignment.description, style = MaterialTheme.typography.bodySmall, maxLines = 2)
         }
@@ -198,25 +213,38 @@ fun SubmissionListScreen(
 }
 
 @Composable
-fun CreateAssignmentDialog(onDismiss: () -> Unit, onSave: (String, String, Long) -> Unit) {
+fun CreateAssignmentDialog(onDismiss: () -> Unit, onSave: (String, String, Long, String) -> Unit) {
     var title by remember { mutableStateOf("") }
     var desc by remember { mutableStateOf("") }
     var daysPlus by remember { mutableStateOf("7") }
+    var selectedType by remember { mutableStateOf("作業") }
+    val types = listOf("作業", "小考", "期中考", "期末考", "其他")
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("派發新作業") },
+        title = { Text("發布評量項目") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("作業標題") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("作業說明") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
-                OutlinedTextField(value = daysPlus, onValueChange = { daysPlus = it }, label = { Text("截止天數 (從今日起)") }, modifier = Modifier.fillMaxWidth())
+                Text("項目類型", style = MaterialTheme.typography.labelSmall)
+                Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                    types.forEach { type ->
+                        FilterChip(
+                            selected = selectedType == type,
+                            onClick = { selectedType = type },
+                            label = { Text(type) },
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                    }
+                }
+                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("評量名稱") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("說明") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+                OutlinedTextField(value = daysPlus, onValueChange = { daysPlus = it }, label = { Text("截止/考試天數 (從今日起)") }, modifier = Modifier.fillMaxWidth())
             }
         },
         confirmButton = {
             Button(onClick = {
                 val dueDate = System.currentTimeMillis() + (daysPlus.toLongOrNull() ?: 7) * 86400000L
-                onSave(title, desc, dueDate)
+                onSave(title, desc, dueDate, selectedType)
             }) { Text("發布") }
         },
         dismissButton = {
