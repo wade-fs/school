@@ -82,8 +82,12 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     val allCities: StateFlow<List<String>> = dao.getAllCities()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val moeSchoolCount: StateFlow<Int> = dao.getMoeSchoolCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     fun searchMoeSchools(query: String): Flow<List<MoeSchool>> {
         if (query.isBlank()) return flowOf(emptyList())
+        android.util.Log.d("CounselorViewModel", "Searching for school: $query")
         return dao.searchSchools(query)
     }
 
@@ -96,18 +100,25 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                 val url = "https://stats.moe.gov.tw/files/school/$year/high.csv"
                 android.util.Log.d("CounselorViewModel", "Fetching MOE schools from: $url")
                 val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
-                connection.connectTimeout = 15000
-                connection.readTimeout = 15000
+                connection.apply {
+                    connectTimeout = 20000
+                    readTimeout = 20000
+                    requestMethod = "GET"
+                    // 加入 User-Agent 模擬瀏覽器，避免被某些政府伺服器阻擋
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                }
                 
                 if (connection.responseCode == 200) {
                     val schools = CsvParser.parseMoeSchoolCsv(connection.inputStream)
+                    android.util.Log.d("CounselorViewModel", "Parse attempt finished, got ${schools.size} schools")
                     if (schools.isNotEmpty()) {
                         dao.insertMoeSchools(schools)
                         success = true
-                        android.util.Log.d("CounselorViewModel", "Successfully synced ${schools.size} schools from web")
+                    } else {
+                        android.util.Log.e("CounselorViewModel", "Parsed 0 schools from the stream")
                     }
                 } else {
-                    android.util.Log.e("CounselorViewModel", "Web fetch failed: ${connection.responseCode}")
+                    android.util.Log.e("CounselorViewModel", "Web fetch failed: HTTP ${connection.responseCode}")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("CounselorViewModel", "Error fetching MOE schools from web", e)

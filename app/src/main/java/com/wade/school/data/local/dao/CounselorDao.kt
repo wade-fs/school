@@ -298,4 +298,7 @@ interface CounselorDao {
 
     @Query("SELECT DISTINCT city FROM moe_schools")
     fun getAllCities(): Flow<List<String>>
+
+    @Query("SELECT COUNT(*) FROM moe_schools")
+    fun getMoeSchoolCount(): Flow<Int>
 }

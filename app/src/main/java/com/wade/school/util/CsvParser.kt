@@ -82,16 +82,24 @@ object CsvParser {
     // CSV 格式: 學年度(0), 代碼(1), 學校名稱(2), 公/私立(3), 縣市名稱(4), 地址(5), 電話(6), 網址(7)
     fun parseMoeSchoolCsv(inputStream: InputStream): List<MoeSchool> {
         val result = mutableListOf<MoeSchool>()
-        // 教育部公開資料通常為 Big5 或是 UTF-8 BOM，嘗試使用 Big5
-        val reader = BufferedReader(InputStreamReader(inputStream, "Big5"))
         try {
-            reader.readLine() // 跳過標題列
-            reader.forEachLine { line ->
-                // 處理 CSV 逗號與引號，簡單處理 split
-                val tokens = line.split(",").map { it.trim().replace("\"", "") }
+            val bytes = inputStream.readBytes()
+            // 嘗試先用 UTF-8 解析
+            var content = String(bytes, java.nio.charset.Charset.forName("UTF-8"))
+            
+            // 如果解析出奇怪的替換符號 (代表不是合法的 UTF-8，這通常是 Big5 編碼)
+            if (content.contains("\ufffd")) {
+                content = String(bytes, java.nio.charset.Charset.forName("Big5"))
+            }
+
+            val lines = content.split("\n", "\r\n").filter { it.isNotBlank() }
+            if (lines.isEmpty()) return result
+
+            lines.drop(1).forEach { line ->
+                // 使用簡易的狀態機來處理包含引號的 CSV
+                val tokens = line.split(",").map { it.trim().removeSurrounding("\"") }
                 if (tokens.size >= 7) {
                     try {
-                        // 處理縣市與地址中的代碼，例如 [01]新北市 -> 新北市
                         val city = tokens[4].replace(Regex("\\[.*?\\]"), "")
                         val address = tokens[5].replace(Regex("\\[.*?\\]"), "")
 

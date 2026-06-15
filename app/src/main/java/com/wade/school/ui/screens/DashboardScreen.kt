@@ -229,6 +229,7 @@ fun SchoolSettingsDialog(
     
     val moeSchools by remember(searchQuery) { viewModel.searchMoeSchools(searchQuery) }.collectAsState(initial = emptyList())
     val isFetchingMoe by viewModel.isFetchingMoe.collectAsState()
+    val moeSchoolCount by viewModel.moeSchoolCount.collectAsState()
 
     var editablePeriodTimes by remember(periodTimes) { mutableStateOf(periodTimes) }
 
@@ -239,13 +240,21 @@ fun SchoolSettingsDialog(
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
                     val year = remember { com.wade.school.util.AcademicUtils.getCurrentAcademicYear() }
-                    Button(
-                        onClick = { viewModel.fetchMoeSchools(context) },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isFetchingMoe
-                    ) {
-                        if (isFetchingMoe) CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                        else Text("同步全國學校資料庫 ($year 學年度)")
+                    Column {
+                        Button(
+                            onClick = { viewModel.fetchMoeSchools(context) },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !isFetchingMoe
+                        ) {
+                            if (isFetchingMoe) CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                            else Text("同步全國學校資料庫 ($year 學年度)")
+                        }
+                        Text(
+                            text = "目前資料庫內共有 $moeSchoolCount 間學校",
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(top = 4.dp),
+                            color = if (moeSchoolCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        )
                     }
                 }
                 item {
