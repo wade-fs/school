@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.wade.teacher"
+    namespace = "com.wade.school"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.wade.teacher"
+        applicationId = "com.wade.school"
         minSdk = 26
         targetSdk = 35
         versionCode = 1202
@@ -93,6 +93,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
+    implementation("androidx.appcompat:appcompat:1.6.1")
     
     val composeBom = platform("androidx.compose:compose-bom:2024.05.00")
     implementation(composeBom)
