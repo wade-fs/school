@@ -1,6 +1,8 @@
 package com.wade.school.data.local
 
 import androidx.room.TypeConverter
+import com.wade.school.data.local.entity.DocCategory
+import com.wade.school.data.local.entity.DocStatus
 
 class Converters {
     @TypeConverter
@@ -10,4 +12,16 @@ class Converters {
     @TypeConverter
     fun toByteArray(value: String): ByteArray =
         android.util.Base64.decode(value, android.util.Base64.NO_WRAP)
+
+    @TypeConverter
+    fun fromDocStatus(value: DocStatus): String = value.name
+
+    @TypeConverter
+    fun toDocStatus(value: String): DocStatus = DocStatus.valueOf(value)
+
+    @TypeConverter
+    fun fromDocCategory(value: DocCategory): String = value.name
+
+    @TypeConverter
+    fun toDocCategory(value: String): DocCategory = DocCategory.valueOf(value)
 }

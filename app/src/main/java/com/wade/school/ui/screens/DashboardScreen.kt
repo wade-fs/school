@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,6 +40,7 @@ fun DashboardScreen(
     onNavigateToAttendance: (String) -> Unit,
     onNavigateToAttendanceHistory: (String) -> Unit,
     onNavigateToBulletins: (String) -> Unit,
+    onNavigate: (String) -> Unit = {},
     viewModel: CounselorViewModel = viewModel()
 ) {
     val schoolConfig by viewModel.schoolConfig.collectAsState()
@@ -90,7 +90,7 @@ fun DashboardScreen(
                     onClick = { selectedTabIndex = 1 }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null) },
+                    icon = { Icon(Icons.Default.Chat, contentDescription = null) },
                     label = { Text("互動") },
                     selected = selectedTabIndex == 2,
                     onClick = { selectedTabIndex = 2 }
@@ -136,7 +136,7 @@ fun DashboardScreen(
                             onEditClass = { showSettingsDialog = true },
                             viewModel = viewModel
                         )
-                        else -> RoleFeatureContent(role = role)
+                        else -> RoleFeatureContent(role = role, onNavigate = onNavigate)
                     }
                 }
                 1 -> SubjectClassSwitcher()

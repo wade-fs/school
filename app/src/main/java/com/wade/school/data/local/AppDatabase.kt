@@ -39,9 +39,10 @@ import com.wade.school.data.local.entity.*
         ClassCadre::class,
         ClassActivity::class,
         ClassHonor::class,
-        MoeSchool::class
+        MoeSchool::class,
+        OfficialDocument::class          // Phase 1: 公文管理
     ],
-    version = 11,
+    version = 12,                        // bumped from 11
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -63,5 +64,8 @@ abstract class AppDatabase : RoomDatabase() {
                 instance
             }
         }
+
+        // alias used by SchoolInfoViewModel
+        fun getInstance(context: Context): AppDatabase = getDatabase(context)
     }
 }

@@ -24,7 +24,7 @@ import com.wade.school.ui.data.FeatureGroup
 import com.wade.school.ui.data.FeatureItem
 
 @Composable
-fun RoleFeatureContent(role: String) {
+fun RoleFeatureContent(role: String, onNavigate: (String) -> Unit = {}) {
     val groups = FeatureData.getFeaturesForRole(role)
     
     LazyColumn(
@@ -39,19 +39,19 @@ fun RoleFeatureContent(role: String) {
                 modifier = Modifier.padding(bottom = 8.dp, top = 16.dp)
             )
             group.items.forEach { feature ->
-                FeatureRow(feature)
+                FeatureRow(feature, onNavigate)
             }
         }
     }
 }
 
 @Composable
-fun FeatureRow(feature: FeatureItem) {
+fun FeatureRow(feature: FeatureItem, onNavigate: (String) -> Unit = {}) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clickable { /* Navigate to feature.route */ },
+            .clickable { onNavigate(feature.route) },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -135,6 +135,24 @@ private fun getIconForName(name: String): ImageVector {
         "topic" -> Icons.AutoMirrored.Filled.List
         "draw" -> Icons.Default.Create
         "map" -> Icons.Default.Place
+        "search" -> Icons.Default.Search
+        "camera_alt" -> Icons.Default.CameraAlt
+        "archive" -> Icons.Default.Archive
+        "calendar_month" -> Icons.Default.CalendarMonth
+        "how_to_reg" -> Icons.Default.HowToReg
+        "swap_horiz" -> Icons.Default.SwapHoriz
+        "drafts" -> Icons.Default.Drafts
+        "history" -> Icons.Default.History
+        "label" -> Icons.Default.Label
+        "groups" -> Icons.Default.Groups
+        "event_busy" -> Icons.Default.EventBusy
+        "gavel" -> Icons.Default.Gavel
+        "event" -> Icons.Default.Event
+        "assignment" -> Icons.Default.Assignment
+        "summarize" -> Icons.Default.Summarize
+        "meeting_room" -> Icons.Default.MeetingRoom
+        "build" -> Icons.Default.Build
+        "inventory" -> Icons.Default.Inventory
         else -> Icons.Default.Star
     }
 }

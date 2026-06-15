@@ -82,6 +82,9 @@ fun TeacherAppNavigation() {
                 },
                 onNavigateToBulletins = { classId ->
                     navController.navigate("homeroom_mgmt/$classId")
+                },
+                onNavigate = { route ->
+                    navController.navigate(route)
                 }
             )
         }
@@ -176,6 +179,15 @@ fun TeacherAppNavigation() {
             SchoolInfoScreen(
                 onBack = { navController.popBackStack() }
             )
+        }
+        composable("admin/docs/pending") {
+            OfficialDocumentScreen(onBack = { navController.popBackStack() })
+        }
+        composable("admin/docs/search") {
+            OfficialDocumentScreen(onBack = { navController.popBackStack() })
+        }
+        composable("admin/docs/archive") {
+            OfficialDocumentScreen(onBack = { navController.popBackStack() })
         }
     }
 }

@@ -301,4 +301,34 @@ interface CounselorDao {
 
     @Query("SELECT COUNT(*) FROM moe_schools")
     fun getMoeSchoolCount(): Flow<Int>
+    // ── Official Documents (公文管理) ─────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertDocument(doc: com.wade.school.data.local.entity.OfficialDocument)
+
+    @Query("SELECT * FROM official_documents ORDER BY isUrgent DESC, createdAt DESC")
+    fun getAllDocuments(): Flow<List<com.wade.school.data.local.entity.OfficialDocument>>
+
+    @Query("""SELECT * FROM official_documents
+        WHERE status = :status
+        ORDER BY isUrgent DESC, deadline ASC, createdAt DESC""")
+    fun getDocumentsByStatus(status: String): Flow<List<com.wade.school.data.local.entity.OfficialDocument>>
+
+    @Query("""SELECT * FROM official_documents
+        WHERE status NOT IN ('ARCHIVED')
+        ORDER BY isUrgent DESC, deadline ASC, createdAt DESC""")
+    fun getActiveDocuments(): Flow<List<com.wade.school.data.local.entity.OfficialDocument>>
+
+    @Query("""SELECT * FROM official_documents
+        WHERE title LIKE '%' || :query || '%' OR note LIKE '%' || :query || '%'
+        ORDER BY createdAt DESC""")
+    fun searchDocuments(query: String): Flow<List<com.wade.school.data.local.entity.OfficialDocument>>
+
+    @Query("SELECT COUNT(*) FROM official_documents WHERE status = 'PENDING_SIGN'")
+    fun getPendingSignCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM official_documents WHERE status = 'PENDING_SIGN' AND isUrgent = 1")
+    fun getUrgentPendingCount(): Flow<Int>
+
+    @Query("DELETE FROM official_documents WHERE docId = :docId")
+    suspend fun deleteDocument(docId: String)
 }
