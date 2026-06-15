@@ -193,6 +193,10 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch(Dispatchers.IO) { dao.deleteAllStudents() }
     }
 
+    fun clearStudentsForClass(classId: String) {
+        viewModelScope.launch(Dispatchers.IO) { dao.deleteStudentsByClass(classId) }
+    }
+
     fun toggleKeyTracking(studentId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val profile = dao.getProfileForStudent(studentId).first() ?: CounselingProfile(studentId)

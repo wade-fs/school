@@ -48,7 +48,7 @@ fun RoleSelectorScreen(onRoleSelected: (String) -> Unit) {
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = "台灣高中教師智慧助手",
+            text = "中學教師助手",
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
                 fontSize = 24.sp

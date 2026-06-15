@@ -23,6 +23,9 @@ interface CounselorDao {
     @Query("DELETE FROM students")
     suspend fun deleteAllStudents()
 
+    @Query("DELETE FROM students WHERE currentClass = :classId")
+    suspend fun deleteStudentsByClass(classId: String)
+
     // ── Counseling Profiles ───────────────────────────────────────────────────
     @Transaction
     @Query("SELECT * FROM students ORDER BY studentId ASC")

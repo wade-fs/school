@@ -378,7 +378,7 @@ fun CounselingDashboard(
                 } else {
                     Row {
                         IconButton(onClick = { filePickerLauncher.launch(csvMimeTypes) }) {
-                            Icon(Icons.Default.Add, contentDescription = "匯入", tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Default.PersonAdd, contentDescription = "匯入", tint = MaterialTheme.colorScheme.primary)
                         }
                         IconButton(onClick = { viewModel.clearAllStudents() }) {
                             Icon(Icons.Default.Delete, contentDescription = "清空", tint = MaterialTheme.colorScheme.error)
@@ -620,11 +620,16 @@ fun HomeroomDashboard(
                 if (isImporting) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 } else {
-                    IconButton(onClick = { 
-                        android.util.Log.e("HomeroomImport", "Launching file picker for any file")
-                        studentPicker.launch(arrayOf("*/*")) 
-                    }) {
-                        Icon(Icons.Default.Add, contentDescription = "匯入班級學生")
+                    Row {
+                        IconButton(onClick = { 
+                            android.util.Log.e("HomeroomImport", "Launching file picker for any file")
+                            studentPicker.launch(arrayOf("*/*")) 
+                        }) {
+                            Icon(Icons.Default.PersonAdd, contentDescription = "匯入班級學生", tint = MaterialTheme.colorScheme.primary)
+                        }
+                        IconButton(onClick = { viewModel.clearStudentsForClass(classId) }) {
+                            Icon(Icons.Default.Delete, contentDescription = "清空班級學生", tint = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             }
