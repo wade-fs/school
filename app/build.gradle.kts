@@ -13,8 +13,8 @@ android {
         applicationId = "com.wade.teacher"
         minSdk = 26
         targetSdk = 35
-        versionCode = 130
-        versionName = "1.3.0"
+        versionCode = 1202
+        versionName = "1.2.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
