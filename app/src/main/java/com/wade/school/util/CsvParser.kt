@@ -3,6 +3,7 @@ package com.wade.school.util
 import com.wade.school.data.local.entity.CounselingProfile
 import com.wade.school.data.local.entity.Student
 import com.wade.school.data.local.entity.TimetableEntry
+import com.wade.school.data.local.entity.MoeSchool
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -74,6 +75,44 @@ object CsvParser {
                     android.util.Log.w("CsvParser", "Skipping invalid timetable row: $line", e)
                 }
             }
+        }
+        return result
+    }
+
+    // CSV 格式: 學年度(0), 代碼(1), 學校名稱(2), 公/私立(3), 縣市名稱(4), 地址(5), 電話(6), 網址(7)
+    fun parseMoeSchoolCsv(inputStream: InputStream): List<MoeSchool> {
+        val result = mutableListOf<MoeSchool>()
+        // 教育部公開資料通常為 Big5 或是 UTF-8 BOM，嘗試使用 Big5
+        val reader = BufferedReader(InputStreamReader(inputStream, "Big5"))
+        try {
+            reader.readLine() // 跳過標題列
+            reader.forEachLine { line ->
+                // 處理 CSV 逗號與引號，簡單處理 split
+                val tokens = line.split(",").map { it.trim().replace("\"", "") }
+                if (tokens.size >= 7) {
+                    try {
+                        // 處理縣市與地址中的代碼，例如 [01]新北市 -> 新北市
+                        val city = tokens[4].replace(Regex("\\[.*?\\]"), "")
+                        val address = tokens[5].replace(Regex("\\[.*?\\]"), "")
+
+                        result.add(
+                            MoeSchool(
+                                code = tokens[1],
+                                name = tokens[2],
+                                publicPrivate = tokens[3],
+                                city = city,
+                                address = address,
+                                phone = tokens[6],
+                                website = tokens.getOrNull(7)
+                            )
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.w("CsvParser", "跳過無效學校列: $line", e)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CsvParser", "解析教育部 CSV 出錯", e)
         }
         return result
     }

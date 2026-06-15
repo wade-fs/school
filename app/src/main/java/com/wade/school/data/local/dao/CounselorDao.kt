@@ -285,4 +285,17 @@ interface CounselorDao {
 
     @Query("DELETE FROM class_honors WHERE id = :id")
     suspend fun deleteHonor(id: Int)
+
+    // ── MOE Schools ──────────────────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMoeSchools(schools: List<MoeSchool>)
+
+    @Query("SELECT * FROM moe_schools WHERE city = :city")
+    fun getSchoolsByCity(city: String): Flow<List<MoeSchool>>
+
+    @Query("SELECT * FROM moe_schools WHERE name LIKE '%' || :query || '%'")
+    fun searchSchools(query: String): Flow<List<MoeSchool>>
+
+    @Query("SELECT DISTINCT city FROM moe_schools")
+    fun getAllCities(): Flow<List<String>>
 }

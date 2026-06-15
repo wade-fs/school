@@ -38,9 +38,10 @@ import com.wade.school.data.local.entity.*
         BehaviorObservations::class,
         ClassCadre::class,
         ClassActivity::class,
-        ClassHonor::class
+        ClassHonor::class,
+        MoeSchool::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

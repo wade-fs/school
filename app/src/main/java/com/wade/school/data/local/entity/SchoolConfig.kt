@@ -12,10 +12,12 @@ enum class SchoolType {
 @Entity(tableName = "school_config")
 data class SchoolConfig(
     @PrimaryKey val id: Int = 0,
-    val schoolName: String = "新北市立清水高級中學",
+    val schoolName: String = "市立清水高中",
     val schoolType: SchoolType = SchoolType.COMPREHENSIVE,
-    val schoolWebsite: String? = null,
-    val homeroomClass: String = "101",
+    val schoolWebsite: String? = "http://www.cssh.ntpc.edu.tw",
+    val address: String? = "新北市土城區明德路一段72號",
+    val phone: String? = "(02)22707801",
+    val homeroomClass: String = "701",
     val ownerName: String? = null,
     val accessPin: String? = null, // 儲存加密後的 PIN
     val useBiometric: Boolean = false

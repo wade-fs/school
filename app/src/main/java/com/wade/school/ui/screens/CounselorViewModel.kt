@@ -14,12 +14,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// MoeSchool 資料類別 (教育部學校清單)
-data class MoeSchool(
-    val name: String,
-    val city: String,
-    val website: String?
-)
+import com.wade.school.util.AcademicUtils
 
 class CounselorViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = AppDatabase.getDatabase(application).counselorDao()
@@ -56,7 +51,15 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         .map { it ?: SchoolConfig() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SchoolConfig())
 
-    fun updateSchoolConfig(name: String, type: SchoolType, ownerName: String? = null, website: String? = null, homeroom: String? = null) {
+    fun updateSchoolConfig(
+        name: String, 
+        type: SchoolType, 
+        ownerName: String? = null, 
+        website: String? = null, 
+        homeroom: String? = null,
+        address: String? = null,
+        phone: String? = null
+    ) {
         viewModelScope.launch(Dispatchers.IO) {
             val current = schoolConfig.value
             val updated = current.copy(
@@ -64,9 +67,76 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                 schoolType = type,
                 ownerName = ownerName ?: current.ownerName,
                 schoolWebsite = website,
-                homeroomClass = homeroom ?: current.homeroomClass
+                homeroomClass = homeroom ?: current.homeroomClass,
+                address = address ?: current.address,
+                phone = phone ?: current.phone
             )
             dao.upsertSchoolConfig(updated)
+        }
+    }
+
+    // ── 教育部學校資料 ──────────────────────────────────────────────────────
+    private val _isFetchingMoe = MutableStateFlow(false)
+    val isFetchingMoe: StateFlow<Boolean> = _isFetchingMoe
+
+    val allCities: StateFlow<List<String>> = dao.getAllCities()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun searchMoeSchools(query: String): Flow<List<MoeSchool>> {
+        if (query.isBlank()) return flowOf(emptyList())
+        return dao.searchSchools(query)
+    }
+
+    fun fetchMoeSchools(context: android.content.Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isFetchingMoe.value = true
+            var success = false
+            try {
+                val year = AcademicUtils.getCurrentAcademicYear()
+                val url = "https://stats.moe.gov.tw/files/school/$year/high.csv"
+                android.util.Log.d("CounselorViewModel", "Fetching MOE schools from: $url")
+                val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                connection.connectTimeout = 15000
+                connection.readTimeout = 15000
+                
+                if (connection.responseCode == 200) {
+                    val schools = CsvParser.parseMoeSchoolCsv(connection.inputStream)
+                    if (schools.isNotEmpty()) {
+                        dao.insertMoeSchools(schools)
+                        success = true
+                        android.util.Log.d("CounselorViewModel", "Successfully synced ${schools.size} schools from web")
+                    }
+                } else {
+                    android.util.Log.e("CounselorViewModel", "Web fetch failed: ${connection.responseCode}")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("CounselorViewModel", "Error fetching MOE schools from web", e)
+            }
+
+            // Web 失敗則嘗試從 Assets 載入 (預載資料)
+            if (!success) {
+                try {
+                    context.assets.open("high.csv").use { inputStream ->
+                        val schools = CsvParser.parseMoeSchoolCsv(inputStream)
+                        if (schools.isNotEmpty()) {
+                            dao.insertMoeSchools(schools)
+                            success = true
+                            android.util.Log.d("CounselorViewModel", "Successfully loaded ${schools.size} schools from assets")
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("CounselorViewModel", "Error loading schools from assets", e)
+                }
+            }
+
+            withContext(Dispatchers.Main) {
+                if (success) {
+                    android.widget.Toast.makeText(context, "學校資料庫同步完成", android.widget.Toast.LENGTH_SHORT).show()
+                } else {
+                    android.widget.Toast.makeText(context, "同步失敗，請檢查網路連線", android.widget.Toast.LENGTH_LONG).show()
+                }
+                _isFetchingMoe.value = false
+            }
         }
     }
 
@@ -96,7 +166,7 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         list.filter { it.currentClass == config.homeroomClass }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // 教育部學校清單 (未來可接 API，目前為靜態示範資料)
+    // 教育部學校清單狀態 (已移除寫死資料)
     private val _moeSchools = MutableStateFlow<List<MoeSchool>>(emptyList())
     val moeSchools: StateFlow<List<MoeSchool>> = _moeSchools
 
@@ -125,13 +195,6 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                 ).forEach { dao.insertExternalResource(it) }
             }
         }
-        // 示範教育部學校清單（未來替換為真實 API）
-        _moeSchools.value = listOf(
-            MoeSchool("新北市立清水高級中學", "新北市", "https://www.cssh.ntpc.edu.tw"),
-            MoeSchool("臺北市立建國高級中學", "臺北市", "https://www.ck.tp.edu.tw"),
-            MoeSchool("臺北市立中山女子高級中學", "臺北市", "https://www.csghs.tp.edu.tw"),
-            MoeSchool("新北市立板橋高級中學", "新北市", "https://www.pjhs.ntpc.edu.tw"),
-        )
     }
 
     fun updatePeriodTimes(times: List<PeriodTime>) {
