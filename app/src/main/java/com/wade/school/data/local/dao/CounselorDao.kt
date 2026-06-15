@@ -233,7 +233,7 @@ interface CounselorDao {
     @Query("DELETE FROM homeroom_checklists WHERE id = :id")
     suspend fun deleteChecklist(id: Int)
 
-    @Query("SELECT * FROM homeroom_checklists WHERE classId = :classId ORDER BY isDone ASC, date DESC")
+    @Query("SELECT * FROM homeroom_checklists WHERE classId = :classId ORDER BY isDone ASC, date ASC")
     fun getChecklistByClass(classId: String): Flow<List<HomeroomChecklist>>
 
     // ── Parent Contact Log ────────────────────────────────────────────────────
@@ -265,4 +265,24 @@ interface CounselorDao {
 
     @Query("SELECT * FROM class_cadres WHERE classId = :classId")
     fun getCadresByClass(classId: String): Flow<List<ClassCadre>>
+
+    // ── Class Activities ──────────────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertActivity(activity: ClassActivity)
+
+    @Query("SELECT * FROM class_activities WHERE classId = :classId ORDER BY date DESC")
+    fun getActivitiesByClass(classId: String): Flow<List<ClassActivity>>
+
+    @Query("DELETE FROM class_activities WHERE id = :id")
+    suspend fun deleteActivity(id: Int)
+
+    // ── Class Honors ──────────────────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHonor(honor: ClassHonor)
+
+    @Query("SELECT * FROM class_honors WHERE classId = :classId ORDER BY awardDate DESC")
+    fun getHonorsByClass(classId: String): Flow<List<ClassHonor>>
+
+    @Query("DELETE FROM class_honors WHERE id = :id")
+    suspend fun deleteHonor(id: Int)
 }

@@ -386,8 +386,15 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
 
     // 1. 每日叮嚀 (Checklist)
     fun getChecklist(classId: String) = dao.getChecklistByClass(classId)
-    fun addChecklistItem(classId: String, content: String) {
-        viewModelScope.launch(Dispatchers.IO) { dao.insertChecklist(HomeroomChecklist(classId = classId, content = content)) }
+    fun addChecklistItem(classId: String, content: String, targetType: String = "Class", assignedNames: String? = null) {
+        viewModelScope.launch(Dispatchers.IO) { 
+            dao.insertChecklist(HomeroomChecklist(
+                classId = classId, 
+                content = content,
+                targetType = targetType,
+                assignedStudentNames = assignedNames
+            )) 
+        }
     }
     fun toggleChecklistItem(item: HomeroomChecklist) {
         viewModelScope.launch(Dispatchers.IO) { dao.updateChecklist(item.copy(isDone = !item.isDone)) }
@@ -417,6 +424,24 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     }
     fun deleteCadre(id: Int) {
         viewModelScope.launch(Dispatchers.IO) { dao.deleteCadre(id) }
+    }
+
+    // 5. 班級活動 (Activity)
+    fun getActivities(classId: String) = dao.getActivitiesByClass(classId)
+    fun addActivity(activity: ClassActivity) {
+        viewModelScope.launch(Dispatchers.IO) { dao.insertActivity(activity) }
+    }
+    fun deleteActivity(id: Int) {
+        viewModelScope.launch(Dispatchers.IO) { dao.deleteActivity(id) }
+    }
+
+    // 6. 優良事蹟 (Honor)
+    fun getHonors(classId: String) = dao.getHonorsByClass(classId)
+    fun addHonor(honor: ClassHonor) {
+        viewModelScope.launch(Dispatchers.IO) { dao.insertHonor(honor) }
+    }
+    fun deleteHonor(id: Int) {
+        viewModelScope.launch(Dispatchers.IO) { dao.deleteHonor(id) }
     }
 
     // ── 聯絡簿 ──────────────────────────────────────────────────────────────

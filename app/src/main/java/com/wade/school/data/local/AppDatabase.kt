@@ -36,9 +36,11 @@ import com.wade.school.data.local.entity.*
         HomeroomChecklist::class,
         ParentContactLog::class,
         BehaviorObservations::class,
-        ClassCadre::class
+        ClassCadre::class,
+        ClassActivity::class,
+        ClassHonor::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
