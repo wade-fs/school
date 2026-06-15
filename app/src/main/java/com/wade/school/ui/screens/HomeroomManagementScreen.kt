@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -18,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,7 +71,7 @@ fun HomeroomManagementScreen(
                     HomeroomFeature.Cadre -> CadreTab(classId, viewModel)
                     HomeroomFeature.Activity -> ActivityTab(classId, viewModel)
                     HomeroomFeature.Honor -> HonorTab(classId, viewModel)
-                    null -> {} 
+                    null -> {}
                 }
             }
         }
@@ -339,8 +341,7 @@ fun CadreTab(classId: String, viewModel: CounselorViewModel) {
     }
 
     if (showAddDialog) {
-        var position by remember { mutableStateOf("") }
-        var selectedStudent by remember { mutableStateOf<Student?>(null) }
+        var position by remember { mutableStateOf("") }; var selectedStudent by remember { mutableStateOf<Student?>(null) }
         AlertDialog(onDismissRequest = { showAddDialog = false }, title = { Text("設定幹部") }, text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = position, onValueChange = { position = it }, label = { Text("職稱") }, modifier = Modifier.fillMaxWidth())
@@ -350,24 +351,59 @@ fun CadreTab(classId: String, viewModel: CounselorViewModel) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityTab(classId: String, viewModel: CounselorViewModel) {
     val activities by viewModel.getActivities(classId).collectAsState(initial = emptyList())
     var showAddDialog by remember { mutableStateOf(false) }
+    var activityToEdit by remember { mutableStateOf<ClassActivity?>(null) }
+    val localContext = LocalContext.current
 
     Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(activities) { activity ->
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { activityToEdit = activity },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(activity.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             Spacer(modifier = Modifier.weight(1f))
-                            Text(SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date(activity.date)), style = MaterialTheme.typography.labelSmall)
+                            IconButton(onClick = { viewModel.deleteActivity(activity.id) }) {
+                                Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                            }
                         }
-                        activity.location?.let { Text("地點: $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) }
+                        
+                        val sdf = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
+                        val dateText = if (activity.startDate == activity.endDate) sdf.format(Date(activity.startDate)) else "${sdf.format(Date(activity.startDate))} ~ ${sdf.format(Date(activity.endDate))}"
+                        
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CalendarToday, null, modifier = Modifier.size(14.dp), tint = Color.Gray)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(dateText, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                        }
+
+                        if (!activity.location.isNullOrBlank() || !activity.locationUrl.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Place, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = activity.location ?: "查看地圖",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.clickable {
+                                        val url = activity.locationUrl ?: "geo:0,0?q=${activity.location}"
+                                        try { localContext.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) } 
+                                        catch (e: Exception) { android.widget.Toast.makeText(localContext, "無法開啟地圖", android.widget.Toast.LENGTH_SHORT).show() }
+                                    }
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(activity.description, style = MaterialTheme.typography.bodyMedium)
-                        IconButton(onClick = { viewModel.deleteActivity(activity.id) }, modifier = Modifier.align(Alignment.End)) { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
+                        Text(text = "點擊可編輯內容", style = MaterialTheme.typography.labelSmall, color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
                     }
                 }
             }
@@ -375,17 +411,62 @@ fun ActivityTab(classId: String, viewModel: CounselorViewModel) {
         FloatingActionButton(onClick = { showAddDialog = true }, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) { Icon(Icons.Default.Add, null) }
     }
 
-    if (showAddDialog) {
-        var title by remember { mutableStateOf("") }
-        var location by remember { mutableStateOf("") }
-        var desc by remember { mutableStateOf("") }
-        AlertDialog(onDismissRequest = { showAddDialog = false }, title = { Text("紀錄班級活動") }, text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("活動名稱") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = location, onValueChange = { location = it }, label = { Text("地點") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("內容描述") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
+    if (showAddDialog || activityToEdit != null) {
+        val editing = activityToEdit
+        var title by remember(editing) { mutableStateOf(editing?.title ?: "") }
+        var location by remember(editing) { mutableStateOf(editing?.location ?: "") }
+        var locationUrl by remember(editing) { mutableStateOf(editing?.locationUrl ?: "") }
+        var desc by remember(editing) { mutableStateOf(editing?.description ?: "") }
+        
+        val datePickerState = rememberDateRangePickerState(
+            initialSelectedStartDateMillis = editing?.startDate,
+            initialSelectedEndDateMillis = editing?.endDate
+        )
+        var showDatePicker by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { showAddDialog = false; activityToEdit = null },
+            title = { Text(if (editing == null) "紀錄班級活動" else "編輯活動詳情") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("活動名稱") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
+                        val start = datePickerState.selectedStartDateMillis
+                        val end = datePickerState.selectedEndDateMillis
+                        val sdf = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
+                        Text(if (start != null && end != null) "${sdf.format(Date(start))} ~ ${sdf.format(Date(end))}" else "選擇日期範圍")
+                    }
+                    OutlinedTextField(value = location, onValueChange = { location = it }, label = { Text("地點名稱") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = locationUrl, onValueChange = { locationUrl = it }, label = { Text("Google Map 連結") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("內容描述/備註 (如店家電話)") }, modifier = Modifier.fillMaxWidth(), minLines = 5)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (title.isNotBlank()) {
+                        val act = ClassActivity(
+                            id = editing?.id ?: 0,
+                            classId = classId,
+                            title = title,
+                            startDate = datePickerState.selectedStartDateMillis ?: System.currentTimeMillis(),
+                            endDate = datePickerState.selectedEndDateMillis ?: datePickerState.selectedStartDateMillis ?: System.currentTimeMillis(),
+                            location = location,
+                            locationUrl = locationUrl.ifBlank { null },
+                            description = desc
+                        )
+                        if (editing == null) viewModel.addActivity(act) else viewModel.updateActivity(act)
+                        showAddDialog = false; activityToEdit = null
+                    }
+                }) { Text("儲存") }
+            },
+            dismissButton = { TextButton(onClick = { showAddDialog = false; activityToEdit = null }) { Text("取消") } }
+        )
+
+        if (showDatePicker) {
+            DatePickerDialog(onDismissRequest = { showDatePicker = false }, confirmButton = { TextButton(onClick = { showDatePicker = false }) { Text("確定") } }) {
+                DateRangePicker(state = datePickerState, modifier = Modifier.height(400.dp))
             }
-        }, confirmButton = { TextButton(onClick = { if (title.isNotBlank()) { viewModel.addActivity(ClassActivity(classId = classId, title = title, location = location, description = desc)); showAddDialog = false } }) { Text("儲存") } })
+        }
     }
 }
 
@@ -399,10 +480,7 @@ fun HonorTab(classId: String, viewModel: CounselorViewModel) {
     Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(honors) { honor ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(), 
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
-                ) {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.EmojiEvents, null, tint = Color(0xFFFFC107))
@@ -413,133 +491,33 @@ fun HonorTab(classId: String, viewModel: CounselorViewModel) {
                         }
                         Text("獲獎對象: ${honor.studentName ?: "全班"}", style = MaterialTheme.typography.bodyMedium)
                         Text(SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date(honor.awardDate)), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                        IconButton(onClick = { viewModel.deleteHonor(honor.id) }, modifier = Modifier.align(Alignment.End)) { 
-                            Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) 
-                        }
+                        IconButton(onClick = { viewModel.deleteHonor(honor.id) }, modifier = Modifier.align(Alignment.End)) { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
                     }
                 }
             }
         }
-        FloatingActionButton(onClick = { showAddDialog = true }, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) { 
-            Icon(Icons.Default.EmojiEvents, null) 
-        }
+        FloatingActionButton(onClick = { showAddDialog = true }, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) { Icon(Icons.Default.EmojiEvents, null) }
     }
 
     if (showAddDialog) {
-        var title by remember { mutableStateOf("") }
-        var level by remember { mutableStateOf("校內") }
-        var recipientType by remember { mutableStateOf("Class") } // "Class", "Students", "Group"
-        var selectedStudents by remember { mutableStateOf(setOf<String>()) }
-        var groupName by remember { mutableStateOf("") }
-        var showStudentPicker by remember { mutableStateOf(false) }
-
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text("新增優良事蹟") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("獎項名稱 (如：大隊接力第一名)") }, modifier = Modifier.fillMaxWidth())
-                    
-                    Text("獲獎對象:", style = MaterialTheme.typography.labelMedium)
-                    Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                        FilterChip(
-                            selected = recipientType == "Class", 
-                            onClick = { recipientType = "Class" }, 
-                            label = { Text("全班") }
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        FilterChip(
-                            selected = recipientType == "Students", 
-                            onClick = { recipientType = "Students" }, 
-                            label = { Text(if (selectedStudents.isEmpty()) "特定學生" else "已選 ${selectedStudents.size} 人") }
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        FilterChip(
-                            selected = recipientType == "Group", 
-                            onClick = { recipientType = "Group" }, 
-                            label = { Text("團體/小組") }
-                        )
-                    }
-
-                    when (recipientType) {
-                        "Students" -> {
-                            OutlinedButton(onClick = { showStudentPicker = true }, modifier = Modifier.fillMaxWidth()) {
-                                Icon(Icons.Default.PersonAdd, null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("選擇名單")
-                            }
-                            if (selectedStudents.isNotEmpty()) {
-                                Text(
-                                    "名單: " + students.filter { it.studentId in selectedStudents }.joinToString(", ") { it.name },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                        "Group" -> {
-                            OutlinedTextField(
-                                value = groupName, 
-                                onValueChange = { groupName = it }, 
-                                label = { Text("團體名稱 (如：合唱團小組)") }, 
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-
-                    Text("獲獎等級:", style = MaterialTheme.typography.labelMedium)
-                    Row {
-                        listOf("校內", "全縣", "全國").forEach { l ->
-                            FilterChip(selected = level == l, onClick = { level = l }, label = { Text(l) })
-                            Spacer(Modifier.width(8.dp))
-                        }
-                    }
+        var title by remember { mutableStateOf("") }; var level by remember { mutableStateOf("校內") }; var recipientType by remember { mutableStateOf("Class") }; var selectedStudents by remember { mutableStateOf(setOf<String>()) }; var groupName by remember { mutableStateOf("") }; var showStudentPicker by remember { mutableStateOf(false) }
+        AlertDialog(onDismissRequest = { showAddDialog = false }, title = { Text("新增優良事蹟") }, text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("獎項名稱") }, modifier = Modifier.fillMaxWidth())
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                    FilterChip(selected = recipientType == "Class", onClick = { recipientType = "Class" }, label = { Text("全班") })
+                    Spacer(Modifier.width(8.dp))
+                    FilterChip(selected = recipientType == "Students", onClick = { recipientType = "Students" }, label = { Text(if (selectedStudents.isEmpty()) "特定學生" else "已選 ${selectedStudents.size} 人") })
+                    Spacer(Modifier.width(8.dp))
+                    FilterChip(selected = recipientType == "Group", onClick = { recipientType = "Group" }, label = { Text("團體/小組") })
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (title.isNotBlank()) {
-                        val finalRecipientName = when (recipientType) {
-                            "Class" -> "全班"
-                            "Students" -> students.filter { it.studentId in selectedStudents }.joinToString(", ") { it.name }
-                            "Group" -> groupName
-                            else -> "全班"
-                        }
-                        
-                        viewModel.addHonor(ClassHonor(
-                            classId = classId,
-                            studentId = if (recipientType == "Students") selectedStudents.joinToString(",") else null,
-                            studentName = finalRecipientName,
-                            awardTitle = title,
-                            level = level,
-                            category = "其他"
-                        ))
-                        showAddDialog = false
-                    }
-                }) { Text("儲存") }
-            },
-            dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text("取消") } }
-        )
-
-        if (showStudentPicker) {
-            AlertDialog(
-                onDismissRequest = { showStudentPicker = false },
-                title = { Text("選擇獲獎學生") },
-                text = {
-                    LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-                        items(students) { student ->
-                            val isSelected = student.studentId in selectedStudents
-                            ListItem(
-                                headlineContent = { Text("${student.seatNo} 號 - ${student.name}") },
-                                modifier = Modifier.clickable {
-                                    selectedStudents = if (isSelected) selectedStudents - student.studentId else selectedStudents + student.studentId
-                                },
-                                trailingContent = { Checkbox(checked = isSelected, onCheckedChange = null) }
-                            )
-                        }
-                    }
-                },
-                confirmButton = { TextButton(onClick = { showStudentPicker = false }) { Text("確定") } }
-            )
-        }
+                if (recipientType == "Students") {
+                    OutlinedButton(onClick = { showStudentPicker = true }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.PersonAdd, null); Spacer(Modifier.width(8.dp)); Text("選擇名單") }
+                    if (selectedStudents.isNotEmpty()) Text("名單: " + students.filter { it.studentId in selectedStudents }.joinToString(", ") { it.name }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                } else if (recipientType == "Group") OutlinedTextField(value = groupName, onValueChange = { groupName = it }, label = { Text("團體名稱") }, modifier = Modifier.fillMaxWidth())
+                Row { listOf("校內", "全縣", "全國").forEach { l -> FilterChip(selected = level == l, onClick = { level = l }, label = { Text(l) }); Spacer(Modifier.width(8.dp)) } }
+            }
+        }, confirmButton = { TextButton(onClick = { if (title.isNotBlank()) { val finalRecipientName = when (recipientType) { "Class" -> "全班"; "Students" -> students.filter { it.studentId in selectedStudents }.joinToString(", ") { it.name }; "Group" -> groupName; else -> "全班" }; viewModel.addHonor(ClassHonor(classId = classId, studentId = if (recipientType == "Students") selectedStudents.joinToString(",") else null, studentName = finalRecipientName, awardTitle = title, level = level, category = "其他")); showAddDialog = false } }) { Text("儲存") } })
+        if (showStudentPicker) AlertDialog(onDismissRequest = { showStudentPicker = false }, title = { Text("選擇獲獎學生") }, text = { LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) { items(students) { student -> val isSelected = student.studentId in selectedStudents; ListItem(headlineContent = { Text("${student.seatNo} 號 - ${student.name}") }, modifier = Modifier.clickable { selectedStudents = if (isSelected) selectedStudents - student.studentId else selectedStudents + student.studentId }, trailingContent = { Checkbox(checked = isSelected, onCheckedChange = null) }) } } }, confirmButton = { TextButton(onClick = { showStudentPicker = false }) { Text("確定") } })
     }
 }

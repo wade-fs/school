@@ -270,7 +270,7 @@ interface CounselorDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertActivity(activity: ClassActivity)
 
-    @Query("SELECT * FROM class_activities WHERE classId = :classId ORDER BY date DESC")
+    @Query("SELECT * FROM class_activities WHERE classId = :classId ORDER BY startDate DESC")
     fun getActivitiesByClass(classId: String): Flow<List<ClassActivity>>
 
     @Query("DELETE FROM class_activities WHERE id = :id")

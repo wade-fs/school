@@ -431,6 +431,9 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     fun addActivity(activity: ClassActivity) {
         viewModelScope.launch(Dispatchers.IO) { dao.insertActivity(activity) }
     }
+    fun updateActivity(activity: ClassActivity) {
+        viewModelScope.launch(Dispatchers.IO) { dao.insertActivity(activity) } // insertActivity is REPLACE
+    }
     fun deleteActivity(id: Int) {
         viewModelScope.launch(Dispatchers.IO) { dao.deleteActivity(id) }
     }
