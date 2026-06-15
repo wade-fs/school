@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,7 +30,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 sealed class HomeroomFeature(val title: String, val icon: ImageVector, val id: String, val color: Color) {
-    data object Checklist : HomeroomFeature("每日叮嚀", Icons.Default.FactCheck, "checklist", Color(0xFF4CAF50))
+    data object Checklist : HomeroomFeature("每日叮嚀", Icons.AutoMirrored.Filled.FactCheck, "checklist", Color(0xFF4CAF50))
     data object Contact : HomeroomFeature("家長聯絡", Icons.Default.ContactPhone, "contact", Color(0xFF2196F3))
     data object Observation : HomeroomFeature("行為觀察", Icons.Default.Visibility, "observation", Color(0xFFFF9800))
     data object Cadre : HomeroomFeature("幹部名單", Icons.Default.Badge, "cadre", Color(0xFF9C27B0))
