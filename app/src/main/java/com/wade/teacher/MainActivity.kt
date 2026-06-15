@@ -14,6 +14,9 @@ import androidx.navigation.compose.rememberNavController
 import com.wade.teacher.ui.screens.*
 import com.wade.teacher.ui.theme.TaiwanTeacherAppTheme
 
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +70,9 @@ fun TeacherAppNavigation() {
                 },
                 onNavigateToAttendance = { classId ->
                     navController.navigate("attendance/$classId")
+                },
+                onNavigateToAttendanceHistory = { classId ->
+                    navController.navigate("attendance_history/$classId")
                 },
                 onNavigateToBulletins = { classId ->
                     navController.navigate("bulletins/$classId")
@@ -122,11 +128,29 @@ fun TeacherAppNavigation() {
                 onBack = { navController.popBackStack() }
             )
         }
-        composable("attendance/{classId}") { backStackEntry ->
+        composable("attendance/{classId}?date={date}", arguments = listOf(
+            navArgument("date") { 
+                type = NavType.LongType
+                defaultValue = -1L 
+            }
+        )) { backStackEntry ->
             val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            val date = backStackEntry.arguments?.getLong("date") ?: -1L
+            val actualDate = if (date == -1L) System.currentTimeMillis() else date
             AttendanceScreen(
                 classId = classId,
+                date = actualDate,
                 onBack = { navController.popBackStack() }
+            )
+        }
+        composable("attendance_history/{classId}") { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            AttendanceHistoryScreen(
+                classId = classId,
+                onBack = { navController.popBackStack() },
+                onEditDate = { dateMillis ->
+                    navController.navigate("attendance/$classId?date=$dateMillis")
+                }
             )
         }
         composable("bulletins/{classId}") { backStackEntry ->

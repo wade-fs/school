@@ -47,6 +47,7 @@ fun DashboardScreen(
     onNavigateToAssignments: (String) -> Unit = {},
     onNavigateToAnalysis: (String) -> Unit = {},
     onNavigateToAttendance: (String) -> Unit = {},
+    onNavigateToAttendanceHistory: (String) -> Unit = {},
     onNavigateToBulletins: (String) -> Unit = {}
 ) {
     val viewModel: CounselorViewModel = viewModel()
@@ -150,6 +151,7 @@ fun DashboardScreen(
                             onNavigateToStudent = onNavigateToStudent,
                             onNavigateToMoodCheck = { onNavigateToMoodCheck(schoolConfig.homeroomClass) },
                             onNavigateToAttendance = onNavigateToAttendance,
+                            onNavigateToAttendanceHistory = onNavigateToAttendanceHistory,
                             onNavigateToBulletins = onNavigateToBulletins,
                             viewModel = viewModel
                         )
@@ -591,6 +593,7 @@ fun HomeroomDashboard(
     onNavigateToStudent: (String, String) -> Unit,
     onNavigateToMoodCheck: () -> Unit,
     onNavigateToAttendance: (String) -> Unit,
+    onNavigateToAttendanceHistory: (String) -> Unit,
     onNavigateToBulletins: (String) -> Unit,
     viewModel: CounselorViewModel
 ) {
@@ -643,12 +646,19 @@ fun HomeroomDashboard(
                     modifier = Modifier.weight(1f)
                 ) { Text("數位點名") }
                 
-                Button(
-                    onClick = { onNavigateToBulletins(classId) },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                ) { Text("班級公告") }
+                OutlinedButton(
+                    onClick = { onNavigateToAttendanceHistory(classId) },
+                    modifier = Modifier.weight(1f)
+                ) { Text("歷史/分析") }
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Button(
+                onClick = { onNavigateToBulletins(classId) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) { Text("班級公告") }
+            
             Spacer(modifier = Modifier.height(12.dp))
         }
         

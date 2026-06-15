@@ -1,6 +1,9 @@
 package com.wade.teacher.ui.theme
 
 import android.app.Activity
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
@@ -33,9 +36,10 @@ fun TaiwanTeacherAppTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            val activity = view.context as ComponentActivity
+            activity.enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.dark(colorScheme.primary.toArgb())
+            )
         }
     }
 

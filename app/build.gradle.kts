@@ -1,20 +1,20 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.0"
+    id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
 
 android {
     namespace = "com.wade.teacher"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.wade.teacher"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 120
-        versionName = "1.2.0"
+        targetSdk = 35
+        versionCode = 121
+        versionName = "1.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -58,6 +58,16 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+            // 直接將參數傳給編譯器插件，這是最底層、最能繞過警告的寫法
+            freeCompilerArgs.addAll(
+                "-P", "plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=OptimizeNonSkippingGroups"
+            )
+        }
     }
 
     lint {

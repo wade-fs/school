@@ -291,14 +291,32 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // ── 導師功能 (Homeroom) ──────────────────────────────────────────────────
-    fun submitAttendance(records: List<AttendanceRecord>) {
+    fun submitAttendance(records: List<AttendanceRecord>, date: Long = System.currentTimeMillis()) {
         viewModelScope.launch(Dispatchers.IO) {
-            dao.insertAttendance(records)
+            val calendar = java.util.Calendar.getInstance()
+            calendar.timeInMillis = date
+            calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+            calendar.set(java.util.Calendar.MINUTE, 0)
+            calendar.set(java.util.Calendar.SECOND, 0)
+            calendar.set(java.util.Calendar.MILLISECOND, 0)
+            val startOfDay = calendar.timeInMillis
+            val endOfDay = startOfDay + 86400000L
+            
+            // Delete existing records for that class and day to avoid duplicates when updating
+            if (records.isNotEmpty()) {
+                dao.deleteAttendanceForDate(records[0].classId, startOfDay, endOfDay)
+                dao.insertAttendance(records.map { it.copy(date = startOfDay + 12 * 3600000L) }) // Store at mid-day
+            }
         }
     }
 
     fun getAttendanceForToday(classId: String): Flow<List<AttendanceRecord>> {
+        return getAttendanceForDate(classId, System.currentTimeMillis())
+    }
+
+    fun getAttendanceForDate(classId: String, date: Long): Flow<List<AttendanceRecord>> {
         val calendar = java.util.Calendar.getInstance()
+        calendar.timeInMillis = date
         calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
         calendar.set(java.util.Calendar.MINUTE, 0)
         calendar.set(java.util.Calendar.SECOND, 0)
@@ -307,6 +325,8 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         val endOfDay = startOfDay + 86400000L
         return dao.getAttendanceForDate(classId, startOfDay, endOfDay)
     }
+
+    fun getAllAttendanceForClass(classId: String): Flow<List<AttendanceRecord>> = dao.getAllAttendanceForClass(classId)
 
     fun publishBulletin(classId: String, title: String, content: String) {
         viewModelScope.launch(Dispatchers.IO) {

@@ -15,23 +15,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wade.teacher.data.local.entity.AttendanceRecord
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttendanceScreen(
     classId: String,
     onBack: () -> Unit,
+    date: Long = System.currentTimeMillis(),
     viewModel: CounselorViewModel = viewModel()
 ) {
     val students by viewModel.students.collectAsState()
-    val todayAttendance by viewModel.getAttendanceForToday(classId).collectAsState(initial = emptyList())
+    val attendanceRecords by viewModel.getAttendanceForDate(classId, date).collectAsState(initial = emptyList())
     
     val studentsInClass = students.filter { it.currentClass == classId }
+    val sdf = remember { SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()) }
+    val dateStr = sdf.format(Date(date))
 
     // Map student ID to current status (default "出席")
-    var localStatusMap by remember(todayAttendance, studentsInClass) {
+    var localStatusMap by remember(attendanceRecords, studentsInClass) {
         val initialMap = studentsInClass.associate { it.studentId to "出席" }.toMutableMap()
-        todayAttendance.forEach { record ->
+        attendanceRecords.forEach { record ->
             initialMap[record.studentId] = record.status
         }
         mutableStateOf(initialMap)
@@ -42,7 +47,12 @@ fun AttendanceScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("$classId 班 - 數位點名") },
+                title = { 
+                    Column {
+                        Text("$classId 班 - 數位點名", style = MaterialTheme.typography.titleMedium)
+                        Text(dateStr, style = MaterialTheme.typography.labelSmall)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回") }
                 },
@@ -53,11 +63,11 @@ fun AttendanceScreen(
                                 AttendanceRecord(
                                     studentId = student.studentId,
                                     classId = classId,
-                                    date = System.currentTimeMillis(),
+                                    date = date,
                                     status = localStatusMap[student.studentId] ?: "出席"
                                 )
                             }
-                            viewModel.submitAttendance(records)
+                            viewModel.submitAttendance(records, date)
                             onBack()
                         }
                     ) {

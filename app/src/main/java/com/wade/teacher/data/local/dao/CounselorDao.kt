@@ -190,8 +190,14 @@ interface CounselorDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAttendance(records: List<AttendanceRecord>)
 
+    @Query("DELETE FROM attendance_records WHERE classId = :classId AND date >= :startOfDay AND date < :endOfDay")
+    suspend fun deleteAttendanceForDate(classId: String, startOfDay: Long, endOfDay: Long)
+
     @Query("SELECT * FROM attendance_records WHERE classId = :classId AND date >= :startOfDay AND date < :endOfDay")
     fun getAttendanceForDate(classId: String, startOfDay: Long, endOfDay: Long): Flow<List<AttendanceRecord>>
+
+    @Query("SELECT * FROM attendance_records WHERE classId = :classId ORDER BY date DESC")
+    fun getAllAttendanceForClass(classId: String): Flow<List<AttendanceRecord>>
 
     // ── Class Bulletins ───────────────────────────────────────────────────────
     @Insert(onConflict = OnConflictStrategy.REPLACE)
