@@ -364,46 +364,27 @@ fun ActivityTab(classId: String, viewModel: CounselorViewModel) {
             items(activities) { activity ->
                 Card(
                     modifier = Modifier.fillMaxWidth().clickable { activityToEdit = activity },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(activity.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Spacer(modifier = Modifier.weight(1f))
-                            IconButton(onClick = { viewModel.deleteActivity(activity.id) }) {
-                                Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                            
+                            val sdf = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
+                            val dateText = if (activity.startDate == activity.endDate) {
+                                sdf.format(Date(activity.startDate))
+                            } else {
+                                "${sdf.format(Date(activity.startDate))} ~ ${sdf.format(Date(activity.endDate))}"
                             }
-                        }
-                        
-                        val sdf = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
-                        val dateText = if (activity.startDate == activity.endDate) sdf.format(Date(activity.startDate)) else "${sdf.format(Date(activity.startDate))} ~ ${sdf.format(Date(activity.endDate))}"
-                        
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CalendarToday, null, modifier = Modifier.size(14.dp), tint = Color.Gray)
-                            Spacer(modifier = Modifier.width(4.dp))
                             Text(dateText, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                         }
-
-                        if (!activity.location.isNullOrBlank() || !activity.locationUrl.isNullOrBlank()) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Place, null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = activity.location ?: "查看地圖",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.clickable {
-                                        val url = activity.locationUrl ?: "geo:0,0?q=${activity.location}"
-                                        try { localContext.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) } 
-                                        catch (e: Exception) { android.widget.Toast.makeText(localContext, "無法開啟地圖", android.widget.Toast.LENGTH_SHORT).show() }
-                                    }
-                                )
-                            }
+                        
+                        IconButton(onClick = { viewModel.deleteActivity(activity.id) }) {
+                            Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(activity.description, style = MaterialTheme.typography.bodyMedium)
-                        Text(text = "點擊可編輯內容", style = MaterialTheme.typography.labelSmall, color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
                     }
                 }
             }
