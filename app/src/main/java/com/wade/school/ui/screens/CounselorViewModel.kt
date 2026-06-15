@@ -206,6 +206,15 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                 ).forEach { dao.insertExternalResource(it) }
             }
         }
+        
+        // 初始化時自動同步全國學校資料庫（若資料庫為空）
+        viewModelScope.launch(Dispatchers.IO) {
+            val count = dao.getMoeSchoolCount().first()
+            if (count == 0) {
+                android.util.Log.d("CounselorViewModel", "MOE database is empty. Auto-syncing on startup...")
+                fetchMoeSchools(application.applicationContext)
+            }
+        }
     }
 
     fun updatePeriodTimes(times: List<PeriodTime>) {
