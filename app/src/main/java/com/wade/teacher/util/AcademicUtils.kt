@@ -43,4 +43,29 @@ object AcademicUtils {
         val semester = if (getCurrentSemester() == 1) "上" else "下"
         return "${getCurrentAcademicYear()}學年度 $semester 學期"
     }
+
+    /**
+     * 智慧判斷當前節次
+     * 根據台灣學校一般作息時間推算
+     */
+    fun getSmartPeriodName(): String {
+        val calendar = Calendar.getInstance()
+        val hour = calendar.get(Calendar.HOUR_OF_DAY)
+        val minute = calendar.get(Calendar.MINUTE)
+        val totalMinutes = hour * 60 + minute
+
+        return when {
+            totalMinutes < (8 * 60 + 10) -> "早修"
+            totalMinutes < (9 * 60 + 10) -> "第一節"
+            totalMinutes < (10 * 60 + 10) -> "第二節"
+            totalMinutes < (11 * 60 + 10) -> "第三節"
+            totalMinutes < (12 * 60 + 10) -> "第四節"
+            totalMinutes < (13 * 60 + 10) -> "午休"
+            totalMinutes < (14 * 60 + 10) -> "第五節"
+            totalMinutes < (15 * 60 + 10) -> "第六節"
+            totalMinutes < (16 * 60 + 10) -> "第七節"
+            totalMinutes < (17 * 60 + 10) -> "第八節"
+            else -> "晚自習"
+        }
+    }
 }

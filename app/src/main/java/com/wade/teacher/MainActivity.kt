@@ -3,6 +3,7 @@ package com.wade.teacher
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -20,6 +21,7 @@ import androidx.navigation.navArgument
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
             TaiwanTeacherAppTheme {
                 Surface(
@@ -128,18 +130,24 @@ fun TeacherAppNavigation() {
                 onBack = { navController.popBackStack() }
             )
         }
-        composable("attendance/{classId}?date={date}", arguments = listOf(
+        composable("attendance/{classId}?date={date}&period={period}", arguments = listOf(
             navArgument("date") { 
                 type = NavType.LongType
                 defaultValue = -1L 
+            },
+            navArgument("period") {
+                type = NavType.StringType
+                nullable = true
             }
         )) { backStackEntry ->
             val classId = backStackEntry.arguments?.getString("classId") ?: ""
             val date = backStackEntry.arguments?.getLong("date") ?: -1L
+            val period = backStackEntry.arguments?.getString("period")
             val actualDate = if (date == -1L) System.currentTimeMillis() else date
             AttendanceScreen(
                 classId = classId,
                 date = actualDate,
+                initialPeriod = period,
                 onBack = { navController.popBackStack() }
             )
         }
@@ -148,8 +156,8 @@ fun TeacherAppNavigation() {
             AttendanceHistoryScreen(
                 classId = classId,
                 onBack = { navController.popBackStack() },
-                onEditDate = { dateMillis ->
-                    navController.navigate("attendance/$classId?date=$dateMillis")
+                onEditDate = { dateMillis, period ->
+                    navController.navigate("attendance/$classId?date=$dateMillis&period=$period")
                 }
             )
         }

@@ -302,10 +302,11 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
             val startOfDay = calendar.timeInMillis
             val endOfDay = startOfDay + 86400000L
             
-            // Delete existing records for that class and day to avoid duplicates when updating
+            // Delete existing records for that class, day, AND period to avoid duplicates when updating
             if (records.isNotEmpty()) {
-                dao.deleteAttendanceForDate(records[0].classId, startOfDay, endOfDay)
-                dao.insertAttendance(records.map { it.copy(date = startOfDay + 12 * 3600000L) }) // Store at mid-day
+                val periodName = records[0].periodName
+                dao.deleteAttendanceForPeriod(records[0].classId, startOfDay, endOfDay, periodName)
+                dao.insertAttendance(records.map { it.copy(date = startOfDay + 12 * 3600000L) }) 
             }
         }
     }
@@ -324,6 +325,18 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         val startOfDay = calendar.timeInMillis
         val endOfDay = startOfDay + 86400000L
         return dao.getAttendanceForDate(classId, startOfDay, endOfDay)
+    }
+
+    fun getAttendanceForPeriod(classId: String, date: Long, periodName: String): Flow<List<AttendanceRecord>> {
+        val calendar = java.util.Calendar.getInstance()
+        calendar.timeInMillis = date
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        calendar.set(java.util.Calendar.MINUTE, 0)
+        calendar.set(java.util.Calendar.SECOND, 0)
+        calendar.set(java.util.Calendar.MILLISECOND, 0)
+        val startOfDay = calendar.timeInMillis
+        val endOfDay = startOfDay + 86400000L
+        return dao.getAttendanceForPeriod(classId, startOfDay, endOfDay, periodName)
     }
 
     fun getAllAttendanceForClass(classId: String): Flow<List<AttendanceRecord>> = dao.getAllAttendanceForClass(classId)

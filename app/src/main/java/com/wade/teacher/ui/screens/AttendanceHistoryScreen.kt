@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,7 +26,7 @@ import java.util.*
 fun AttendanceHistoryScreen(
     classId: String,
     onBack: () -> Unit,
-    onEditDate: (Long) -> Unit,
+    onEditDate: (Long, String) -> Unit,
     viewModel: CounselorViewModel = viewModel()
 ) {
     val allRecords by viewModel.getAllAttendanceForClass(classId).collectAsState(initial = emptyList())
@@ -33,7 +34,7 @@ fun AttendanceHistoryScreen(
     val studentsInClass = students.filter { it.currentClass == classId }
     val sdf = remember { SimpleDateFormat("yyyy/MM/dd (E)", Locale.getDefault()) }
 
-    // Group records by date
+    // Group records by date, then by period
     val groupedRecords = remember(allRecords) {
         allRecords.groupBy { record ->
             val cal = Calendar.getInstance()
@@ -43,6 +44,8 @@ fun AttendanceHistoryScreen(
             cal.set(Calendar.SECOND, 0)
             cal.set(Calendar.MILLISECOND, 0)
             cal.timeInMillis
+        }.mapValues { (_, records) ->
+            records.groupBy { it.periodName }
         }.toSortedMap(compareByDescending { it })
     }
 
@@ -70,30 +73,53 @@ fun AttendanceHistoryScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
-                    AttendanceAnalysisCard(groupedRecords, studentsInClass.size)
+                    val flatRecords = allRecords.groupBy { record ->
+                        val cal = Calendar.getInstance()
+                        cal.timeInMillis = record.date
+                        cal.set(Calendar.HOUR_OF_DAY, 0)
+                        cal.set(Calendar.MINUTE, 0)
+                        cal.set(Calendar.SECOND, 0)
+                        cal.set(Calendar.MILLISECOND, 0)
+                        cal.timeInMillis
+                    }
+                    AttendanceAnalysisCard(flatRecords, studentsInClass.size)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("歷史紀錄", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
 
-                groupedRecords.forEach { (dateMillis, records) ->
+                groupedRecords.forEach { (dateMillis, periodMap) ->
                     item {
-                        val abnormalCount = records.count { it.status != "出席" }
-                        
-                        Card(
-                            modifier = Modifier.fillMaxWidth().clickable { onEditDate(dateMillis) },
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (abnormalCount > 0) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant
+                        Column {
+                            Text(
+                                text = sdf.format(Date(dateMillis)),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(vertical = 4.dp)
                             )
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(sdf.format(Date(dateMillis)), fontWeight = FontWeight.Bold)
-                                    Text("異常人數: $abnormalCount / ${studentsInClass.size}", style = MaterialTheme.typography.bodySmall)
+                            
+                            periodMap.forEach { (period, records) ->
+                                val abnormalCount = records.count { it.status != "出席" }
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                        .clickable { onEditDate(dateMillis, period) },
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (abnormalCount > 0) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(period, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                                            Text("異常: $abnormalCount 人", style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        Icon(Icons.Default.Edit, contentDescription = "編輯", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                    }
                                 }
-                                Icon(Icons.Default.DateRange, contentDescription = "編輯", tint = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }

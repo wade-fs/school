@@ -153,6 +153,7 @@ fun DashboardScreen(
                             onNavigateToAttendance = onNavigateToAttendance,
                             onNavigateToAttendanceHistory = onNavigateToAttendanceHistory,
                             onNavigateToBulletins = onNavigateToBulletins,
+                            onEditClass = { showSettingsDialog = true },
                             viewModel = viewModel
                         )
                         else -> RoleFeatureContent(role = role)
@@ -595,6 +596,7 @@ fun HomeroomDashboard(
     onNavigateToAttendance: (String) -> Unit,
     onNavigateToAttendanceHistory: (String) -> Unit,
     onNavigateToBulletins: (String) -> Unit,
+    onEditClass: () -> Unit,
     viewModel: CounselorViewModel
 ) {
     val schoolConfig by viewModel.schoolConfig.collectAsState()
@@ -618,7 +620,25 @@ fun HomeroomDashboard(
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("導師班級：$classId 班", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier
+                        .clickable { onEditClass() }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "導師班級：$classId 班", 
+                        style = MaterialTheme.typography.headlineSmall, 
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Icon(
+                        Icons.Default.Edit, 
+                        contentDescription = "修改班級",
+                        modifier = Modifier.size(20.dp).padding(start = 4.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
                 Spacer(modifier = Modifier.weight(1f))
                 if (isImporting) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))

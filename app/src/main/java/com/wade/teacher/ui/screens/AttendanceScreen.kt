@@ -1,9 +1,11 @@
 package com.wade.teacher.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -18,23 +20,29 @@ import com.wade.teacher.data.local.entity.AttendanceRecord
 import java.text.SimpleDateFormat
 import java.util.*
 
+import com.wade.teacher.util.AcademicUtils
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttendanceScreen(
     classId: String,
     onBack: () -> Unit,
     date: Long = System.currentTimeMillis(),
+    initialPeriod: String? = null,
     viewModel: CounselorViewModel = viewModel()
 ) {
     val students by viewModel.students.collectAsState()
-    val attendanceRecords by viewModel.getAttendanceForDate(classId, date).collectAsState(initial = emptyList())
+    val periodOptions = listOf("早修", "午休", "第一節", "第二節", "第三節", "第四節", "第五節", "第六節", "第七節", "第八節", "晚自習")
+    var selectedPeriod by remember { mutableStateOf(initialPeriod ?: AcademicUtils.getSmartPeriodName()) }
+    
+    val attendanceRecords by viewModel.getAttendanceForPeriod(classId, date, selectedPeriod).collectAsState(initial = emptyList())
     
     val studentsInClass = students.filter { it.currentClass == classId }
     val sdf = remember { SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()) }
     val dateStr = sdf.format(Date(date))
 
     // Map student ID to current status (default "出席")
-    var localStatusMap by remember(attendanceRecords, studentsInClass) {
+    var localStatusMap by remember(attendanceRecords, studentsInClass, selectedPeriod) {
         val initialMap = studentsInClass.associate { it.studentId to "出席" }.toMutableMap()
         attendanceRecords.forEach { record ->
             initialMap[record.studentId] = record.status
@@ -50,7 +58,7 @@ fun AttendanceScreen(
                 title = { 
                     Column {
                         Text("$classId 班 - 數位點名", style = MaterialTheme.typography.titleMedium)
-                        Text(dateStr, style = MaterialTheme.typography.labelSmall)
+                        Text("$dateStr ($selectedPeriod)", style = MaterialTheme.typography.labelSmall)
                     }
                 },
                 navigationIcon = {
@@ -64,6 +72,7 @@ fun AttendanceScreen(
                                     studentId = student.studentId,
                                     classId = classId,
                                     date = date,
+                                    periodName = selectedPeriod,
                                     status = localStatusMap[student.studentId] ?: "出席"
                                 )
                             }
@@ -86,7 +95,24 @@ fun AttendanceScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
-                Text("今日名單 (${studentsInClass.size} 人)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("選擇時段", style = MaterialTheme.typography.labelSmall)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    periodOptions.forEach { period ->
+                        FilterChip(
+                            selected = selectedPeriod == period,
+                            onClick = { selectedPeriod = period },
+                            label = { Text(period) }
+                        )
+                    }
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+
+            item {
+                Text("名單 (${studentsInClass.size} 人)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
             }
             
