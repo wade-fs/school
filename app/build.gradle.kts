@@ -13,8 +13,8 @@ android {
         applicationId = "com.wade.school"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1300
-        versionName = "1.3.0"
+        versionCode = 1301
+        versionName = "1.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -115,6 +115,7 @@ dependencies {
     
     implementation("io.ktor:ktor-client-android:2.3.11")
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation("org.jsoup:jsoup:1.17.2")
     
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

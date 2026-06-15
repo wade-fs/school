@@ -33,6 +33,7 @@ val roles = listOf(
     TeacherRole("admin", "行政教師", "公文流程、校務行事曆", Icons.Default.Settings),
     TeacherRole("counseling", "輔導教師", "個案管理、心理健康", Icons.Default.Favorite),
     TeacherRole("dept_head", "科主任", "課程規劃、教師督導", Icons.Default.Face),
+    TeacherRole("school_info", "學校資訊", "公告、聯絡資訊、校網", Icons.Default.School),
     TeacherRole("student", "學生", "繳交作業、課表查詢", Icons.Default.Person),
     TeacherRole("parent", "家長", "聯絡簿簽閱、請假申請", Icons.Default.AccountCircle)
 )
@@ -113,8 +114,11 @@ fun RoleSelectorScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             items(roles) { role ->
-                RoleCard(role = role, onClick = { 
-                    if (isConfigured) {
+                RoleCard(role = role, onClick = {
+                    if (role.id == "school_info") {
+                        // 學校資訊不需要身份驗證，直接進入
+                        onRoleSelected(role.id)
+                    } else if (isConfigured) {
                         showPinGate = role.id
                     } else {
                         onRoleSelected(role.id)

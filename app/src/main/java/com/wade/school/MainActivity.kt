@@ -41,7 +41,11 @@ fun TeacherAppNavigation() {
     NavHost(navController = navController, startDestination = "role_selector") {
         composable("role_selector") {
             RoleSelectorScreen(onRoleSelected = { role ->
-                navController.navigate("dashboard/$role")
+                if (role == "school_info") {
+                    navController.navigate("school_info")
+                } else {
+                    navController.navigate("dashboard/$role")
+                }
             })
         }
         composable("dashboard/{role}") { backStackEntry ->
@@ -165,6 +169,11 @@ fun TeacherAppNavigation() {
             val classId = backStackEntry.arguments?.getString("classId") ?: ""
             HomeroomManagementScreen(
                 classId = classId,
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("school_info") {
+            SchoolInfoScreen(
                 onBack = { navController.popBackStack() }
             )
         }
