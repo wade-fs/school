@@ -8,13 +8,17 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.fragment.app.FragmentActivity
+import com.wade.teacher.util.BiometricHelper
 
 data class TeacherRole(
     val id: String,
@@ -34,7 +38,47 @@ val roles = listOf(
 )
 
 @Composable
-fun RoleSelectorScreen(onRoleSelected: (String) -> Unit) {
+fun RoleSelectorScreen(
+    onRoleSelected: (String) -> Unit,
+    viewModel: CounselorViewModel = viewModel()
+) {
+    val schoolConfig by viewModel.schoolConfig.collectAsState()
+    val isConfigured = schoolConfig.accessPin != null
+    val context = LocalContext.current
+    val activity = context as? FragmentActivity
+
+    var showSetupDialog by remember { mutableStateOf(false) }
+    var showPinGate by remember { mutableStateOf<String?>(null) } // Store role ID being gated
+
+    LaunchedEffect(isConfigured) {
+        if (!isConfigured) {
+            showSetupDialog = true
+        }
+    }
+
+    if (showSetupDialog) {
+        SecuritySetupDialog(
+            onDismiss = { if (isConfigured) showSetupDialog = false },
+            onSave = { name, pin, useBio ->
+                viewModel.setupSecurity(name, pin, useBio)
+                showSetupDialog = false
+            }
+        )
+    }
+
+    if (showPinGate != null) {
+        PinGateDialog(
+            onDismiss = { showPinGate = null },
+            onSuccess = { 
+                val roleId = showPinGate!!
+                showPinGate = null
+                onRoleSelected(roleId)
+            },
+            viewModel = viewModel,
+            useBiometric = schoolConfig.useBiometric
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -43,7 +87,7 @@ fun RoleSelectorScreen(onRoleSelected: (String) -> Unit) {
     ) {
         Spacer(modifier = Modifier.height(48.dp))
         Text(
-            text = "歡迎使用",
+            text = if (schoolConfig.ownerName != null) "您好，${schoolConfig.ownerName} 老師" else "歡迎使用",
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.primary
         )
@@ -56,7 +100,7 @@ fun RoleSelectorScreen(onRoleSelected: (String) -> Unit) {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "請選擇您的目前角色以進入專屬介面",
+            text = "請選擇角色以進入工作台",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -69,10 +113,144 @@ fun RoleSelectorScreen(onRoleSelected: (String) -> Unit) {
             modifier = Modifier.fillMaxWidth()
         ) {
             items(roles) { role ->
-                RoleCard(role = role, onClick = { onRoleSelected(role.id) })
+                RoleCard(role = role, onClick = { 
+                    if (isConfigured) {
+                        showPinGate = role.id
+                    } else {
+                        onRoleSelected(role.id)
+                    }
+                })
             }
         }
     }
+}
+
+@Composable
+fun SecuritySetupDialog(
+    onDismiss: () -> Unit,
+    onSave: (String, String, Boolean) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var pin by remember { mutableStateOf("") }
+    var confirmPin by remember { mutableStateOf("") }
+    var useBiometric by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val canBio = remember { BiometricHelper.canAuthenticate(context) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("初次使用安全設定") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("請設定您的名稱與存取密碼，以保護學生隱私資料。", style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("教師姓名") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = pin,
+                    onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) pin = it },
+                    label = { Text("設定 PIN 碼 (4-6 位數字)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = confirmPin,
+                    onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) confirmPin = it },
+                    label = { Text("確認 PIN 碼") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (canBio) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = useBiometric, onCheckedChange = { useBiometric = it })
+                        Text("同時啟用指紋/生物辨識解鎖")
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { 
+                    if (name.isNotBlank() && pin.length >= 4 && pin == confirmPin) {
+                        onSave(name, pin, useBiometric)
+                    }
+                },
+                enabled = name.isNotBlank() && pin.length >= 4 && pin == confirmPin
+            ) {
+                Text("完成設定")
+            }
+        }
+    )
+}
+
+@Composable
+fun PinGateDialog(
+    onDismiss: () -> Unit,
+    onSuccess: () -> Unit,
+    viewModel: CounselorViewModel,
+    useBiometric: Boolean
+) {
+    var pin by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val activity = context as? FragmentActivity
+
+    LaunchedEffect(Unit) {
+        if (useBiometric && activity != null) {
+            BiometricHelper.showBiometricPrompt(
+                activity,
+                onSuccess = { onSuccess() },
+                onError = { /* Fail back to PIN */ }
+            )
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("安全驗證") },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("請輸入 PIN 碼進入系統", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = pin,
+                    onValueChange = { 
+                        if (it.length <= 6 && it.all { c -> c.isDigit() }) {
+                            pin = it
+                            error = false
+                            if (it.length >= 4 && viewModel.verifyPin(it)) {
+                                onSuccess()
+                            }
+                        }
+                    },
+                    label = { Text("PIN 碼") },
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    singleLine = true,
+                    isError = error,
+                    modifier = Modifier.width(150.dp)
+                )
+                if (error) {
+                    Text("密碼錯誤", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { 
+                if (viewModel.verifyPin(pin)) {
+                    onSuccess()
+                } else {
+                    error = true
+                }
+            }) { Text("驗證") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
 }
 
 @Composable

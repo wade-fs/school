@@ -13,8 +13,8 @@ android {
         applicationId = "com.wade.teacher"
         minSdk = 26
         targetSdk = 35
-        versionCode = 121
-        versionName = "1.2.1"
+        versionCode = 130
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -104,6 +104,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("androidx.compose.animation:animation")
+    implementation("androidx.biometric:biometric-ktx:1.2.0-alpha05")
 
     // Room Database
     val roomVersion = "2.6.1"

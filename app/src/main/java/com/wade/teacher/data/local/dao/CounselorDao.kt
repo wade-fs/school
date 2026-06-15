@@ -215,4 +215,11 @@ interface CounselorDao {
 
     @Query("SELECT * FROM contact_book WHERE classId = :classId AND date = :date LIMIT 1")
     fun getContactBookForDate(classId: String, date: Long): Flow<ContactBookEntry?>
+
+    // ── School Config ──────────────────────────────────────────────────────────
+    @Query("SELECT * FROM school_config WHERE id = 0")
+    fun getSchoolConfig(): Flow<SchoolConfig?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSchoolConfig(config: SchoolConfig)
 }

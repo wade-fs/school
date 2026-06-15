@@ -43,11 +43,38 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isImporting = MutableStateFlow(false)
     val isImporting: StateFlow<Boolean> = _isImporting
 
+    // ── Security Helper ──────────────────────────────────────────────────────
+    private fun hashPin(pin: String): String {
+        val bytes = pin.toByteArray()
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        val digest = md.digest(bytes)
+        return digest.fold("") { str, it -> str + "%02x".format(it) }
+    }
+
+    fun verifyPin(pin: String): Boolean {
+        val storedHash = _schoolConfig.value.accessPin ?: return true
+        return hashPin(pin) == storedHash
+    }
+
+    fun setupSecurity(ownerName: String, pin: String, useBiometric: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val current = _schoolConfig.value
+            val updated = current.copy(
+                ownerName = ownerName,
+                accessPin = hashPin(pin),
+                useBiometric = useBiometric
+            )
+            dao.upsertSchoolConfig(updated)
+        }
+    }
+
+    fun isSecurityConfigured(): Boolean {
+        return _schoolConfig.value.accessPin != null
+    }
+
     // ── 學校設定 ──────────────────────────────────────────────────────────────
     private val _schoolConfig = MutableStateFlow(SchoolConfig())
     val schoolConfig: StateFlow<SchoolConfig> = _schoolConfig
-    
-    private fun schoolConfigFlow() = _schoolConfig
 
     // 導師：僅顯示導師班級的學生（必須在 _schoolConfig 宣告之後初始化）
     val homeroomStudents: StateFlow<List<Student>> = combine(dao.getAllStudents(), _schoolConfig) { list, config ->
@@ -70,6 +97,15 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
+        // 從資料庫載入學校設定
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.getSchoolConfig().collect { config ->
+                if (config != null) {
+                    _schoolConfig.value = config
+                }
+            }
+        }
+        
         // 初始化時預填外部資源（若資料庫為空）
         viewModelScope.launch(Dispatchers.IO) {
             val existing = dao.getExternalResources().first()

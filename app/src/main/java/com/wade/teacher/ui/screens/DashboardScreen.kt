@@ -52,9 +52,10 @@ fun DashboardScreen(
 ) {
     val viewModel: CounselorViewModel = viewModel()
     val schoolConfig by viewModel.schoolConfig.collectAsState()
-    val roleTitle = roles.find { it.id == role }?.title ?: "未知角色"
+    val roleTitle = roles.find { it.id == role }?.title ?: "教師"
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showProfileDialog by remember { mutableStateOf(false) }
 
     if (showSettingsDialog) {
         val moeSchools by viewModel.moeSchools.collectAsState()
@@ -71,6 +72,21 @@ fun DashboardScreen(
                 viewModel.updateSchoolConfig(name, type, website, homeroom)
                 viewModel.updatePeriodTimes(times)
                 showSettingsDialog = false
+            }
+        )
+    }
+
+    if (showProfileDialog) {
+        UserProfileDialog(
+            config = schoolConfig,
+            onDismiss = { showProfileDialog = false },
+            onLogout = { 
+                showProfileDialog = false
+                onBack() 
+            },
+            onResetPin = {
+                // TODO: Implement PIN reset
+                showProfileDialog = false
             }
         )
     }
@@ -95,7 +111,7 @@ fun DashboardScreen(
                     IconButton(onClick = { showSettingsDialog = true }) {
                         Icon(Icons.Default.Settings, contentDescription = "學校設定")
                     }
-                    IconButton(onClick = { /* TODO */ }) {
+                    IconButton(onClick = { showProfileDialog = true }) {
                         Icon(Icons.Default.Person, contentDescription = "個人資料")
                     }
                 },
@@ -716,4 +732,42 @@ fun HomeroomDashboard(
             Spacer(modifier = Modifier.height(80.dp))
         }
     }
+}
+
+@Composable
+fun UserProfileDialog(
+    config: com.wade.teacher.data.local.entity.SchoolConfig,
+    onDismiss: () -> Unit,
+    onLogout: () -> Unit,
+    onResetPin: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("個人中心") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ListItem(
+                    headlineContent = { Text(config.ownerName ?: "未設定姓名") },
+                    supportingContent = { Text("目前的登入身分") },
+                    leadingContent = { Icon(Icons.Default.Person, contentDescription = null) }
+                )
+                HorizontalDivider()
+                TextButton(onClick = onResetPin, modifier = Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Lock, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("修改存取 PIN 碼")
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onLogout, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                Text("安全登出 / 鎖定")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("關閉") }
+        }
+    )
 }
