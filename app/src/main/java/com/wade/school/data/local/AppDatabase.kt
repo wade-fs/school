@@ -46,11 +46,12 @@ import com.wade.school.data.local.entity.*
         AssessmentTemplate::class,
         AssessmentQuestion::class,
         AssessmentSession::class,
-        AssessmentResponse::class
-    ],
-    version = 15, // bumped
-    exportSchema = false
-)
+        AssessmentResponse::class,
+        ReferralRecord::class
+        ],
+        version = 15,                        // bumped from 14
+        exportSchema = false
+        )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun counselorDao(): CounselorDao

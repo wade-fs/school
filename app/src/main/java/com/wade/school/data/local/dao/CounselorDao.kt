@@ -362,4 +362,10 @@ interface CounselorDao {
     
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertResponse(response: AssessmentResponse)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertReferral(referral: ReferralRecord)
+
+    @Query("SELECT * FROM referral_records WHERE studentId = :studentId ORDER BY referredAt DESC")
+    fun getReferralsForStudent(studentId: String): Flow<List<ReferralRecord>>
 }
