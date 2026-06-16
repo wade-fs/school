@@ -231,15 +231,17 @@ fun TeacherAppNavigation() {
                 templateId = templateId,
                 studentId = studentId,
                 onBack = { navController.popBackStack() },
-                onNavigateToResult = { answersJson -> 
-                    navController.navigate("counseling/result/${Uri.encode(answersJson)}") 
-                }
+                onNavigateToResult = { navController.navigate("counseling/result/$sessionId/$templateId/$studentId") }
             )
         }
-        composable("counseling/result/{answersJson}") { backStackEntry ->
-            val answersJson = backStackEntry.arguments?.getString("answersJson") ?: ""
-            CareerInterestResultScreen(
-                answersJson = answersJson,
+        composable("counseling/result/{sessionId}/{templateId}/{studentId}") { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getString("sessionId") ?: ""
+            val templateId = backStackEntry.arguments?.getString("templateId") ?: ""
+            val studentId = backStackEntry.arguments?.getString("studentId") ?: ""
+            AssessmentResultScreen(
+                sessionId = sessionId,
+                templateId = templateId,
+                studentId = studentId,
                 onBack = { navController.popBackStack() }
             )
         }

@@ -359,9 +359,6 @@ interface CounselorDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAssessmentSession(session: AssessmentSession)
-    
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertResponse(response: AssessmentResponse)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertReferral(referral: ReferralRecord)
