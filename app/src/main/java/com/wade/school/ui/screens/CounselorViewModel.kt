@@ -50,7 +50,8 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                     AssessmentTemplate("CAREER_INTEREST", "生涯興趣量表 (Holland)", TemplateCategory.CAREER, "探索職業興趣，協助志願選填。", true),
                     AssessmentTemplate("GENDER_EQUALITY", "性別平等調查", TemplateCategory.GENDER_EQUALITY, "校園性平意識與友善環境感受調查。", true),
                     AssessmentTemplate("INTERPERSONAL", "人際與霸凌調查", TemplateCategory.INTERPERSONAL, "班級人際關係與校園安全感調查。", true),
-                    AssessmentTemplate("ROMANCE", "愛情關係健康度調查", TemplateCategory.INTERPERSONAL, "評估高中生對健康交往關係的觀念與經驗。", true)
+                    AssessmentTemplate("ROMANCE", "愛情關係健康度調查", TemplateCategory.INTERPERSONAL, "評估高中生對健康交往關係的觀念與經驗。", true),
+                    AssessmentTemplate("BSRS5_TW", "心情溫度計 (BSRS-5)", TemplateCategory.MENTAL_HEALTH, "評估過去一週情緒困擾程度，高風險即時警示。", true)
                 )
                 templates.forEach { dao.insertAssessmentTemplate(it) }
                 
@@ -131,6 +132,17 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                     AssessmentQuestion(templateId = "ROMANCE", order = 10, text = "如果感情遇到困擾，我願意尋求輔導老師的協助", type = QuestionType.LIKERT)
                 )
                 assessmentDao.insertQuestions(romance)
+
+                // BSRS-5 Questions
+                val bsrs5 = listOf(
+                    AssessmentQuestion(templateId = "BSRS5_TW", order = 1, text = "過去一星期，你是否感到緊張不安？", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "BSRS5_TW", order = 2, text = "過去一星期，你是否感到容易生氣？", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "BSRS5_TW", order = 3, text = "過去一星期，你是否感到心情低落？", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "BSRS5_TW", order = 4, text = "過去一星期，你是否感到食慾不振？", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "BSRS5_TW", order = 5, text = "過去一星期，你是否感到自卑？", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "BSRS5_TW", order = 6, text = "過去一星期，你是否有傷害自己的念頭？", type = QuestionType.YES_NO, riskTrigger = true, riskThreshold = 1)
+                )
+                assessmentDao.insertQuestions(bsrs5)
             }
         }
     }
