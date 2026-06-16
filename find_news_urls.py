@@ -29,7 +29,7 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 # 關鍵字
-TEXT_KEYWORDS = ["最新消息", "校務公告", "學校公告", "公告訊息", "公告事項", "行政公告", "NEWS", "公告", "更多", "MORE", "+", "ALL"]
+TEXT_KEYWORDS = ["最新消息", "校務公告", "學校公告", "公告訊息", "公告事項", "行政公告", "NEWS", "公告", "更多", "MORE", "+", "ALL", "彙整", "全部"]
 URL_KEYWORDS = ['site_news', '/p/4', 'news', 'bulletin', 'announcement', 'board', 'main2.php']
 
 def is_valid_url(url):
@@ -53,67 +53,66 @@ def check_is_announcement_page(html, url):
 
     text_nospace = text.replace(" ", "")
     if "分機表" in text_nospace or "教職員名冊" in text_nospace or "聯絡方式" in text_nospace:
-        if "校長室" in text_nospace or "教務處" in text_nospace:
-            return -1 
+        if "校長室" in text_nospace or "教務處" in text_nospace or "分機" in text_nospace:
+            # 檢查是否包含大量 rowspan，這是分機表最強特徵
+            rowspan_count = len(soup.find_all(['td', 'th'], attrs={'rowspan': True}))
+            if rowspan_count >= 5:
+                return -1 
             
+    # 檢查表格內容是否明顯是通訊錄
     tables = soup.find_all('table')
     for table in tables:
         table_text = table.get_text(separator='', strip=True)
-        if ("分機" in table_text or "電話" in table_text) and ("職稱" in table_text or "姓名" in table_text or "處室" in table_text):
-            return -1
-
-        merged_cells = table.find_all(['td', 'th'], attrs={'colspan': True}) + table.find_all(['td', 'th'], attrs={'rowspan': True})
-        merged_cells = [cell for cell in merged_cells if int(cell.get('colspan', 1)) > 1 or int(cell.get('rowspan', 1)) > 1]
-        rowspan_count = sum(1 for cell in table.find_all(['td', 'th'], attrs={'rowspan': True}) if int(cell.get('rowspan', 1)) > 1)
-        
-        if len(merged_cells) >= 10 or rowspan_count >= 3: 
+        if ("分機" in table_text or "電話" in table_text) and ("職稱" in table_text or "姓名" in table_text):
             return -1
 
     score = 0
 
     # ── 強烈特徵 ──
     if 'site_news/main' in url_lower:
-        score += 10
+        score += 15
+    elif '/p/428-' in url_lower: # Rpage 的全部公告入口通常是 428
+        score += 20
     elif re.search(r'/p/4\d{2}-\d+-\d+\.php', url_lower):
-        # Rpage 目錄格式，有可能是公告，但也可能是交通資訊
-        score += 3
+        score += 5
 
     # ── 評分機制 ──
-    headers1 = ["標題", "日期", "發布單位", "點閱", "類別", "點擊", "發布者"]
-    if sum(1 for h in headers1 if h in text) >= 2: score += 2
+    # 評分一：是否包含公告列表常見的欄位標題 (精確匹配)
+    headers1 = ["標題", "日期", "發布單位", "點閱", "類別", "點擊", "發布者", "公告單位", "發佈單位"]
+    score += sum(10 for h in headers1 if h in text)
     
-    headers2 = ["標題", "日期", "發布", "點閱", "類別", "點擊"]
     # 評分二：是否包含常見的處室單位名稱 (即使縮寫也算)
     units = ["教務", "學務", "總務", "輔導", "圖書", "人事", "教學", "註冊", "訓育", "資訊", "設備", "校長室", "秘書", "特教"]
     unit_count = sum(1 for u in units if u in text)
-    score += unit_count # 每個單位加一分
-
+    score += unit_count * 2 # 每個單位加二分
+    
     # 評分三：找尋多個日期格式的特徵
     date_pattern = re.compile(r'((?:11[0-9]|202[0-9])[/\-\.][0-1][0-9][/\-\.][0-3][0-9])')
     dates_found = date_pattern.findall(text)
     dates_count = len(set(dates_found))
     if dates_count >= 3: 
-        # 公告越多分數越高 (集中度越高)
-        score += dates_count
-
-    has_large_table = False
-    for table in tables:
-        if len(table.find_all('tr')) >= 5:
-            has_large_table = True
-            break
-    if has_large_table: score += 10 # 增加權重
-
+        score += dates_count * 2 # 增加日期權重
+        
+    # 評分四：檢查條列式結構
+    list_items = len(soup.find_all('tr')) + (len(soup.find_all('li')) // 2)
+    if list_items >= 10:
+        score += 15
+            
     if soup.find(class_=re.compile(r'news|announcement|list|cg-list', re.I)):
         score += 5
 
-    # ── 分頁特徵 (公告列表最核心特徵) ──
+    # ── 分頁特徵 ──
     pagination_keywords = ["第一頁", "最後一頁", "上一頁", "下一頁", "頁次：", "Next", "Previous", "Last Page", "First Page", "總共"]
     pagi_match = sum(1 for p in pagination_keywords if p.upper() in text.upper())
-    # 或是偵測常見的分頁符號，如 [1] [2] [3] 或 1 2 3 ... 10
     if pagi_match >= 2 or re.search(r'\[\s*\d+\s*\]', text) or re.search(r'第\s*\d+\s*頁', text) or re.search(r'共\s*\d+\s*頁', text):
-        score += 20 # 增加權重
+        score += 40 # 公告系統的核心
+
+    # ── 標題與核心關鍵字加分 ──
+    if "彙整公告" in text or "全部公告" in text or "公告模組" in text or "公佈欄" in text:
+        score += 50 # 極強訊號
 
     return score
+
 def process_school(school_name, base_url):
     global stop_flag
     if stop_flag:
@@ -149,10 +148,9 @@ def process_school(school_name, base_url):
                 except:
                     pass
 
-        # 紀錄首頁本身是否符合公告頁特徵，作為基準分數
-        homepage_score = check_is_announcement_page(res.text, actual_url)
-        best_candidate = actual_url if homepage_score >= 3 else None
-        best_score = homepage_score if homepage_score >= 3 else 0
+        # 基準：首頁得分
+        best_score = check_is_announcement_page(res.text, actual_url)
+        best_candidate = actual_url if best_score >= 15 else None
         
         candidate_pool = []
         seen_urls = set()
@@ -166,14 +164,14 @@ def process_school(school_name, base_url):
             if href_lower.endswith(('.jpg', '.jpeg', '.png', '.gif', '.pdf', '.doc', '.docx', '.zip', '.rar')): continue
             if 'login' in href_lower or 'signin' in href_lower: continue
             
-            text = a.get_text(strip=True).upper()
+            text_val = a.get_text(strip=True).upper()
             title = a.get('title', '').upper()
             alt_text = ""
             img = a.find('img')
             if img and img.get('alt'):
                 alt_text = img.get('alt').upper()
 
-            combined_text = f"{text} {title} {alt_text}"
+            combined_text = f"{text_val} {title} {alt_text}"
             
             kw_match = any(kw in combined_text for kw in TEXT_KEYWORDS)
             url_match = any(kw in href_lower for kw in URL_KEYWORDS)
@@ -187,37 +185,37 @@ def process_school(school_name, base_url):
                 
                 if base_domain in candidate_netloc and is_valid_url(full_url):
                     seen_urls.add(full_url)
-                    # 優先級計算
                     priority = 0
-                    if any(kw in combined_text for kw in ["更多", "MORE", "ALL", "+"]):
+                    if any(kw in combined_text for kw in ["更多", "全部", "MORE", "ALL", "彙整"]):
+                        priority = 20 # 優先級最高
+                    elif any(kw in combined_text for kw in ["公告", "NEWS"]):
+                        priority = 15
+                    elif 'site_news/main' in full_url.lower() or '/p/428-' in full_url.lower():
                         priority = 10
-                    elif 'site_news/main' in full_url.lower():
-                        priority = 9
-                    elif '/p/428' in full_url.lower() or '/p/403' in full_url.lower():
-                        priority = 8
-                    elif any(kw in combined_text for kw in TEXT_KEYWORDS):
+                    elif '/p/4' in full_url.lower():
                         priority = 5
-                    elif any(kw in href_lower for kw in URL_KEYWORDS):
-                        priority = 3
                     
                     if priority > 0:
                         candidate_pool.append((priority, full_url))
                     
-        # 依照優先級排序，最高分在最前面
+        # 優先級排序
         candidate_pool.sort(key=lambda x: x[0], reverse=True)
         candidates = [url for p, url in candidate_pool]
                     
-        # 增加測試數量到 30 個
+        # 測試候選者
         for candidate_url in candidates[:30]:
-            if stop_flag:
-                break
+            if stop_flag: break
             try:
                 c_res = requests.get(candidate_url, headers=headers, timeout=10, verify=False)
                 c_res.encoding = c_res.apparent_encoding
                 c_score = check_is_announcement_page(c_res.text, candidate_url)
                 
-                if c_score >= best_score and c_score >= 3:
+                # 如果候選者分數更高，或者相同分數但候選者是專門的公告頁，就選它
+                if c_score > best_score and c_score >= 15:
                     best_score = c_score
+                    best_candidate = candidate_url
+                elif c_score == best_score and best_score >= 15:
+                    # 避免首頁搶走專門頁面的位置
                     best_candidate = candidate_url
             except:
                 continue 
@@ -295,8 +293,7 @@ def main():
             for future in concurrent.futures.as_completed(futures):
                 if stop_flag:
                     # Cancel all remaining futures
-                    for f in futures:
-                        f.cancel()
+                    for f in futures: f.cancel()
                     break
                     
                 row_idx = futures[future]
@@ -308,9 +305,7 @@ def main():
                 count += 1
                 if count % 5 == 0 or count == len(schools_to_process):
                     print(f"進度: {count}/{len(schools_to_process)} - 剛處理完: {name} -> {news_url or '未找到'}")
-                        
         except KeyboardInterrupt:
-            # The signal handler already catches this, but just in case
             pass
 
     print("\n正在寫入檔案...")
