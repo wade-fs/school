@@ -18,6 +18,45 @@ import com.wade.school.util.AcademicUtils
 
 class CounselorViewModel(application: Application) : AndroidViewModel(application) {
     private val dao = AppDatabase.getDatabase(application).counselorDao()
+    private val assessmentDao = AppDatabase.getDatabase(application).assessmentDao()
+
+    // ── 評量系統 ──────────────────────────────────────────────────────────────
+    val assessmentTemplates: StateFlow<List<AssessmentTemplate>> = dao.getAllAssessmentTemplates()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun getQuestions(templateId: String) = assessmentDao.getQuestionsForTemplate(templateId)
+
+    fun initBuiltInTemplates() {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (dao.getAssessmentTemplateCount() == 0) {
+                val templates = listOf(
+                    AssessmentTemplate("MOOD_WEEKLY", "學生心情溫度計 (週測)", TemplateCategory.MOOD, "每週監測學生情緒狀況，自動偵測高風險警示。", true),
+                    AssessmentTemplate("PHQ9_TW", "憂鬱症篩檢 (PHQ-9)", TemplateCategory.MENTAL_HEALTH, "過去兩週憂鬱症狀篩檢，高風險即時警示。", true),
+                    AssessmentTemplate("CAREER_INTEREST", "生涯興趣量表 (Holland)", TemplateCategory.CAREER, "探索職業興趣，協助志願選填。", true)
+                )
+                templates.forEach { dao.insertAssessmentTemplate(it) }
+                
+                val phq9 = listOf(
+                    AssessmentQuestion(templateId = "PHQ9_TW", order = 1, text = "對事情提不起勁或沒有樂趣", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "PHQ9_TW", order = 2, text = "感到情緒低落、沮喪或絕望", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "PHQ9_TW", order = 3, text = "入睡困難、睡眠不穩或睡太多", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "PHQ9_TW", order = 4, text = "感到疲倦或沒有活力", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "PHQ9_TW", order = 5, text = "食慾不振或吃太多", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "PHQ9_TW", order = 6, text = "對自己感到不好，覺得自己是個失敗者或讓家人失望", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "PHQ9_TW", order = 7, text = "難以專注在事情上", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "PHQ9_TW", order = 8, text = "動作或說話速度變慢，或者坐立難安", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "PHQ9_TW", order = 9, text = "有不如死掉或傷害自己的念頭", type = QuestionType.LIKERT, riskTrigger = true, riskThreshold = 1)
+                )
+                assessmentDao.insertQuestions(phq9)
+            }
+        }
+    }
+
+    fun startAssessmentSession(session: AssessmentSession) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertAssessmentSession(session)
+        }
+    }
 
     val studentsWithProfiles: StateFlow<List<StudentWithProfile>> = dao.getAllStudentsWithProfiles()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -429,6 +468,13 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     val assessmentTemplates: StateFlow<List<AssessmentTemplate>> = dao.getAllAssessmentTemplates()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val unreadAlerts: StateFlow<List<RiskAlert>> = dao.getUnreadAlerts()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun markAlertAsRead(alertId: Int) {
+        viewModelScope.launch(Dispatchers.IO) { dao.markAsRead(alertId) }
+    }
+
     fun initBuiltInTemplates() {
         viewModelScope.launch(Dispatchers.IO) {
             if (dao.getAssessmentTemplateCount() == 0) {
@@ -441,14 +487,17 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
     }
+
+    fun startAssessmentSession(session: AssessmentSession) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertAssessmentSession(session)
+        }
+    }
+
+    // ── 導師功能 (Homeroom) ──────────────────────────────────────────────────
     fun submitAttendance(records: List<AttendanceRecord>, date: Long = System.currentTimeMillis()) {
         viewModelScope.launch(Dispatchers.IO) {
             val calendar = java.util.Calendar.getInstance()
-            calendar.timeInMillis = date
-            calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
-            calendar.set(java.util.Calendar.MINUTE, 0)
-            calendar.set(java.util.Calendar.SECOND, 0)
-            calendar.set(java.util.Calendar.MILLISECOND, 0)
             val startOfDay = calendar.timeInMillis
             val endOfDay = startOfDay + 86400000L
             

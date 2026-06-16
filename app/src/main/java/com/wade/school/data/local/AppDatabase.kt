@@ -53,6 +53,7 @@ import com.wade.school.data.local.entity.*
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun counselorDao(): CounselorDao
+    abstract fun assessmentDao(): AssessmentDao
 
     companion object {
         @Volatile

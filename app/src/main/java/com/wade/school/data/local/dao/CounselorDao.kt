@@ -356,4 +356,7 @@ interface CounselorDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAssessmentTemplate(template: AssessmentTemplate)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAssessmentSession(session: AssessmentSession)
 }

@@ -187,10 +187,20 @@ fun TeacherAppNavigation() {
         composable("manual") {
             ManualScreen(onBack = { navController.popBackStack() })
         }
+        composable("counseling/alerts") {
+            RiskAlertScreen(onBack = { navController.popBackStack() })
+        }
         composable("counseling/templates") {
             AssessmentManagementScreen(
                 onBack = { navController.popBackStack() },
-                onNavigateToSession = { templateId -> /* TODO: Navigate to session screen */ }
+                onNavigateToSession = { templateId -> navController.navigate("counseling/session/$templateId") }
+            )
+        }
+        composable("counseling/session/{templateId}") { backStackEntry ->
+            val templateId = backStackEntry.arguments?.getString("templateId") ?: ""
+            AssessmentSessionScreen(
+                templateId = templateId,
+                onBack = { navController.popBackStack() }
             )
         }
         composable("admin/docs/pending") {
