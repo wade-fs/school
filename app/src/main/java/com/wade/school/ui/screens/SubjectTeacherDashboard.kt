@@ -30,7 +30,9 @@ fun SubjectTeacherDashboard(
     onNavigateToLessonPlans: () -> Unit = {},
     onNavigateToTagging: (String) -> Unit = {},
     onNavigateToAssignments: (String) -> Unit = {},
-    onNavigateToAnalysis: (String) -> Unit = {}
+    onNavigateToAnalysis: (String) -> Unit = {},
+    onNavigateToScan: () -> Unit = {},
+    onNavigateToManual: () -> Unit = {}
 ) {
     android.util.Log.d("SubjectTeacherDashboard", "Composing SubjectTeacherDashboard")
     val context = LocalContext.current
@@ -215,6 +217,16 @@ fun SubjectTeacherDashboard(
         item {
             Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                 DashboardActionCard("學習成效分析", "班級成績分佈與個別學習曲線", "查看分析", { activeDisplayClassId?.let { onNavigateToAnalysis(it) } })
+            }
+        }
+        item {
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                DashboardActionCard("文件掃描", "拍照上傳紙本公文", "開始", onNavigateToScan)
+            }
+        }
+        item {
+            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                DashboardActionCard("使用手冊", "查看 App 操作說明", "查看", onNavigateToManual)
             }
         }
 

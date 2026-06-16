@@ -180,6 +180,18 @@ fun TeacherAppNavigation() {
                 onBack = { navController.popBackStack() }
             )
         }
+        composable("school_info/scan") {
+            // Using OfficialDocumentScreen as a temporary implementation for scanning
+            OfficialDocumentScreen(onBack = { navController.popBackStack() })
+        }
+        composable("manual") {
+            // Temporary manual screen implementation
+            androidx.compose.material3.Surface(modifier = Modifier.fillMaxSize()) {
+                androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    androidx.compose.material3.Text("使用手冊內容 (開發中)")
+                }
+            }
+        }
         composable("admin/docs/pending") {
             OfficialDocumentScreen(onBack = { navController.popBackStack() })
         }

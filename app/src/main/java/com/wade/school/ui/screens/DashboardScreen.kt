@@ -121,12 +121,21 @@ fun DashboardScreen(
             when (selectedTabIndex) {
                 0 -> {
                     when (role) {
-                        "counseling" -> CounselingDashboard(onNavigateToStudent, { onNavigateToMoodCheck(null) }, onNavigateToResources, viewModel)
+                        "counseling" -> CounselingDashboard(
+                            onNavigateToStudent = onNavigateToStudent, 
+                            onNavigateToMoodCheck = { onNavigateToMoodCheck(null) }, 
+                            onNavigateToResources = onNavigateToResources,
+                            onNavigateToScan = { onNavigate("school_info/scan") },
+                            onNavigateToManual = { onNavigate("manual") },
+                            viewModel = viewModel
+                        )
                         "subject" -> SubjectTeacherDashboard(
                             onNavigateToLessonPlans = onNavigateToLessonPlans,
                             onNavigateToTagging = onNavigateToTagging,
                             onNavigateToAssignments = onNavigateToAssignments,
-                            onNavigateToAnalysis = onNavigateToAnalysis
+                            onNavigateToAnalysis = onNavigateToAnalysis,
+                            onNavigateToScan = { onNavigate("school_info/scan") },
+                            onNavigateToManual = { onNavigate("manual") }
                         )
                         "homeroom" -> HomeroomDashboard(
                             onNavigateToStudent = onNavigateToStudent,
@@ -134,6 +143,8 @@ fun DashboardScreen(
                             onNavigateToAttendance = onNavigateToAttendance,
                             onNavigateToAttendanceHistory = onNavigateToAttendanceHistory,
                             onNavigateToBulletins = onNavigateToBulletins,
+                            onNavigateToScan = { onNavigate("school_info/scan") },
+                            onNavigateToManual = { onNavigate("manual") },
                             onEditClass = { showSettingsDialog = true },
                             viewModel = viewModel
                         )
@@ -322,6 +333,8 @@ fun CounselingDashboard(
     onNavigateToStudent: (String, String) -> Unit,
     onNavigateToMoodCheck: () -> Unit,
     onNavigateToResources: () -> Unit,
+    onNavigateToScan: () -> Unit,
+    onNavigateToManual: () -> Unit,
     viewModel: CounselorViewModel
 ) {
     val context = LocalContext.current
@@ -358,6 +371,12 @@ fun CounselingDashboard(
     ) {
         item {
             SchoolInfoCard(config = schoolConfig)
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        item {
+            Text("常用工具", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            DashboardActionCard("文件掃描", "拍照上傳紙本公文", "開始", onNavigateToScan)
+            DashboardActionCard("使用手冊", "查看 App 操作說明", "查看", onNavigateToManual)
             Spacer(modifier = Modifier.height(16.dp))
         }
         item {
@@ -451,6 +470,8 @@ fun HomeroomDashboard(
     onNavigateToAttendance: (String) -> Unit,
     onNavigateToAttendanceHistory: (String) -> Unit,
     onNavigateToBulletins: (String) -> Unit,
+    onNavigateToScan: () -> Unit,
+    onNavigateToManual: () -> Unit,
     onEditClass: () -> Unit,
     viewModel: CounselorViewModel
 ) {
@@ -472,6 +493,10 @@ fun HomeroomDashboard(
     ) {
         item {
             SchoolInfoCard(config = schoolConfig)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("常用工具", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            DashboardActionCard("文件掃描", "拍照上傳紙本公文", "開始", onNavigateToScan)
+            DashboardActionCard("使用手冊", "查看 App 操作說明", "查看", onNavigateToManual)
             Spacer(modifier = Modifier.height(8.dp))
         }
 
