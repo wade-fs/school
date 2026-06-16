@@ -42,7 +42,8 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                     AssessmentTemplate("PHQ9_TW", "憂鬱症篩檢 (PHQ-9)", TemplateCategory.MENTAL_HEALTH, "過去兩週憂鬱症狀篩檢，高風險即時警示。", true),
                     AssessmentTemplate("CAREER_INTEREST", "生涯興趣量表 (Holland)", TemplateCategory.CAREER, "探索職業興趣，協助志願選填。", true),
                     AssessmentTemplate("GENDER_EQUALITY", "性別平等調查", TemplateCategory.GENDER_EQUALITY, "校園性平意識與友善環境感受調查。", true),
-                    AssessmentTemplate("INTERPERSONAL", "人際與霸凌調查", TemplateCategory.INTERPERSONAL, "班級人際關係與校園安全感調查。", true)
+                    AssessmentTemplate("INTERPERSONAL", "人際與霸凌調查", TemplateCategory.INTERPERSONAL, "班級人際關係與校園安全感調查。", true),
+                    AssessmentTemplate("ROMANCE", "愛情關係健康度調查", TemplateCategory.INTERPERSONAL, "評估高中生對健康交往關係的觀念與經驗。", true)
                 )
                 templates.forEach { dao.insertAssessmentTemplate(it) }
                 
@@ -110,6 +111,19 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                     )
                 }
                 assessmentDao.insertQuestions(schoolStress)
+                val romance = listOf(
+                    AssessmentQuestion(templateId = "ROMANCE", order = 1, text = "健康的感情關係中，兩人應互相尊重彼此的邊界", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "ROMANCE", order = 2, text = "如果對方不回訊息，我有權利一直傳訊息要對方解釋", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "ROMANCE", order = 3, text = "感情中的嫉妒是愛的表現，是正常的", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "ROMANCE", order = 4, text = "如果我不喜歡交往，對方應該要接受我的拒絕", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "ROMANCE", order = 5, text = "我知道什麼是「情感操控 (PUA)」", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "ROMANCE", order = 6, text = "交往中若感到不舒服，我有勇氣說出來", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "ROMANCE", order = 7, text = "如果我喜歡一個人，對方「不要」可能只是害羞", type = QuestionType.LIKERT, riskTrigger = true, riskThreshold = 4),
+                    AssessmentQuestion(templateId = "ROMANCE", order = 8, text = "分手後若持續騷擾對方，這是正確的行為", type = QuestionType.LIKERT, riskTrigger = true, riskThreshold = 4),
+                    AssessmentQuestion(templateId = "ROMANCE", order = 9, text = "我目前的感情狀態讓我感到快樂和安全", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "ROMANCE", order = 10, text = "如果感情遇到困擾，我願意尋求輔導老師的協助", type = QuestionType.LIKERT)
+                )
+                assessmentDao.insertQuestions(romance)
             }
         }
     }
