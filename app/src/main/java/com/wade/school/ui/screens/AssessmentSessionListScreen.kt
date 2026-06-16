@@ -3,6 +3,7 @@ package com.wade.school.ui.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -18,6 +19,7 @@ import java.util.*
 @Composable
 fun AssessmentSessionListScreen(
     onBack: () -> Unit,
+    onNavigateToDetail: (String) -> Unit,
     viewModel: CounselorViewModel = viewModel()
 ) {
     val sessions by viewModel.allSessions.collectAsState()
@@ -36,7 +38,10 @@ fun AssessmentSessionListScreen(
             items(sessions) { session ->
                 val completedCount by viewModel.getCompletedCount(session.sessionId).collectAsState(initial = 0)
                 
-                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Card(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+                    .clickable { onNavigateToDetail(session.sessionId) }) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("場次: ${session.targetClass}", style = MaterialTheme.typography.titleMedium)
                         Text("時間: ${SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(Date(session.scheduledAt))}")
@@ -47,3 +52,4 @@ fun AssessmentSessionListScreen(
         }
     }
 }
+

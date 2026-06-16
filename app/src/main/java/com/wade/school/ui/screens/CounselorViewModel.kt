@@ -32,6 +32,8 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun getCompletedCount(sessionId: String) = assessmentDao.getCompletedCount(sessionId)
+    
+    fun getPendingStudents(sessionId: String) = assessmentDao.getPendingStudents(sessionId)
 
     fun markAlertAsRead(alertId: Int) {
         viewModelScope.launch(Dispatchers.IO) { dao.markAsRead(alertId) }

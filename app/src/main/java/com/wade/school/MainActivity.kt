@@ -195,7 +195,17 @@ fun TeacherAppNavigation() {
             )
         }
         composable("counseling/sessions/active") {
-            AssessmentSessionListScreen(onBack = { navController.popBackStack() })
+            AssessmentSessionListScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToDetail = { sessionId -> navController.navigate("counseling/session/detail/$sessionId") }
+            )
+        }
+        composable("counseling/session/detail/{sessionId}") { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getString("sessionId") ?: ""
+            AssessmentSessionDetailScreen(
+                sessionId = sessionId,
+                onBack = { navController.popBackStack() }
+            )
         }
         composable("counseling/templates") {
             AssessmentManagementScreen(
