@@ -2,10 +2,6 @@ package com.wade.school.ui.screens
 
 import android.Manifest
 import android.content.Intent
-import android.os.Bundle
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,7 +9,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -24,9 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wade.school.data.local.entity.CaseLog
 import com.wade.school.data.local.entity.StudentWithProfile
+import com.wade.school.util.AudioRecorder
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -39,8 +38,10 @@ fun StudentDetailScreen(
     viewModel: CounselorViewModel = viewModel()
 ) {
     var sessionText by remember { mutableStateOf("") }
-    var isRecording by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val audioRecorder = remember { AudioRecorder(context) }
+    var currentRecordFile by remember { mutableStateOf<File?>(null) }
+    var isRecording by remember { mutableStateOf(false) }
     
     val studentWithProfile by viewModel.studentsWithProfiles.collectAsState()
     val currentEntry = studentWithProfile.find { it.student.studentId == studentId }
@@ -49,7 +50,7 @@ fun StudentDetailScreen(
     var showStatusDialog by remember { mutableStateOf(false) }
     var editStatus by remember { mutableStateOf("Active") }
     var editLegal by remember { mutableStateOf("") }
-    var editPriority by remember { mutableStateOf("Normal") }
+    var editPriority by remember { mutableStateOf("1") }
 
     var showScheduleDialog by remember { mutableStateOf(false) }
     var scheduleType by remember { mutableStateOf("初談") }
@@ -58,7 +59,7 @@ fun StudentDetailScreen(
         if (currentEntry != null) {
             editStatus = currentEntry.profile?.status ?: "Active"
             editLegal = currentEntry.profile?.legalStatus ?: "無"
-            editPriority = currentEntry.profile?.priority ?: "Normal"
+            editPriority = currentEntry.profile?.priority ?: "1"
         }
     }
 
@@ -104,11 +105,11 @@ fun StudentDetailScreen(
                         
                         priorities.forEach { p ->
                             val color = when (p) {
-                                "1" -> androidx.compose.ui.graphics.Color(0xFF4CAF50) // Green
-                                "2" -> androidx.compose.ui.graphics.Color(0xFF8BC34A) // Light Green
-                                "3" -> androidx.compose.ui.graphics.Color(0xFFFFEB3B) // Yellow
-                                "4" -> androidx.compose.ui.graphics.Color(0xFFFF9800) // Orange
-                                else -> androidx.compose.ui.graphics.Color(0xFFF44336) // Red
+                                "1" -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
+                                "2" -> androidx.compose.ui.graphics.Color(0xFF8BC34A)
+                                "3" -> androidx.compose.ui.graphics.Color(0xFFFFEB3B)
+                                "4" -> androidx.compose.ui.graphics.Color(0xFFFF9800)
+                                else -> androidx.compose.ui.graphics.Color(0xFFF44336)
                             }
                             
                             FilterChip(
@@ -142,7 +143,7 @@ fun StudentDetailScreen(
             }
         )
     }
-
+    
     val calendar = Calendar.getInstance()
     val timePickerDialog = android.app.TimePickerDialog(
         context,
@@ -215,19 +216,14 @@ fun StudentDetailScreen(
         )
     }
 
-    val speechRecognizer = remember { SpeechRecognizer.createSpeechRecognizer(context) }
-    
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            startListening(speechRecognizer, { isRecording = it }, { text -> sessionText += " " + text })
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            speechRecognizer.destroy()
+            currentRecordFile = audioRecorder.startRecording(studentId)
+            isRecording = true
+        } else {
+            Toast.makeText(context, "錄音需要權限", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -249,7 +245,6 @@ fun StudentDetailScreen(
                         try {
                             context.startActivity(shareIntent)
                         } catch (e: Exception) {
-                            // 若無 Gmail 則用通用分享
                             context.startActivity(Intent.createChooser(shareIntent, "分享輔導紀錄"))
                         }
                     }) {
@@ -257,17 +252,31 @@ fun StudentDetailScreen(
                     }
                     IconButton(onClick = {
                         if (isRecording) {
-                            speechRecognizer.stopListening()
+                            audioRecorder.stopRecording()
                             isRecording = false
+                            Toast.makeText(context, "錄音已儲存", Toast.LENGTH_SHORT).show()
                         } else {
                             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                         }
                     }) {
                         Icon(
                             imageVector = if (isRecording) Icons.Default.MicOff else Icons.Default.Mic,
-                            contentDescription = "語音輸入",
+                            contentDescription = "錄音",
                             tint = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimary
                         )
+                    }
+                    IconButton(onClick = {
+                        currentRecordFile?.let { file ->
+                            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "audio/*"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "分享錄音檔"))
+                        } ?: Toast.makeText(context, "無錄音檔可分享", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(Icons.Default.Upload, contentDescription = "分享錄音")
                     }
                     IconButton(onClick = {
                         if (sessionText.isNotBlank()) {
@@ -287,7 +296,6 @@ fun StudentDetailScreen(
                 )
             )
         }
-        // FloatingActionButton removed
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -296,7 +304,6 @@ fun StudentDetailScreen(
                 .padding(16.dp)
         ) {
             item {
-                // Student Info Header
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
@@ -304,11 +311,11 @@ fun StudentDetailScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         val status = currentEntry?.profile?.status ?: "Active"
                         val legal = currentEntry?.profile?.legalStatus ?: "無"
-                        val priority = currentEntry?.profile?.priority ?: "Normal"
+                        val priority = currentEntry?.profile?.priority ?: "1"
                         
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column {
-                                Text("目前狀態: $status [$priority]", fontWeight = FontWeight.Bold)
+                                Text("目前狀態: $status [風險等級 $priority]", fontWeight = FontWeight.Bold)
                                 Text("法律狀態: $legal")
                             }
                             IconButton(onClick = { showStatusDialog = true }) {
@@ -337,14 +344,14 @@ fun StudentDetailScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                Text("本次晤談輸入", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("本次晤談紀錄", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 OutlinedTextField(
                     value = sessionText,
                     onValueChange = { sessionText = it },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
-                    placeholder = { Text("錄音辨識文字會出現在此，也可手動輸入...") }
+                    placeholder = { Text("錄音內容或手動輸入...") }
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -385,34 +392,4 @@ fun LogItem(log: CaseLog, viewModel: CounselorViewModel) {
             Text(text = viewModel.decryptLogContent(log), style = MaterialTheme.typography.bodyMedium)
         }
     }
-}
-
-private fun startListening(
-    speechRecognizer: SpeechRecognizer,
-    setRecordingState: (Boolean) -> Unit,
-    onResult: (String) -> Unit
-) {
-    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-        putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-TW")
-    }
-
-    speechRecognizer.setRecognitionListener(object : RecognitionListener {
-        override fun onReadyForSpeech(params: Bundle?) { setRecordingState(true) }
-        override fun onBeginningOfSpeech() {}
-        override fun onRmsChanged(rmsdB: Float) {}
-        override fun onBufferReceived(buffer: ByteArray?) {}
-        override fun onEndOfSpeech() { setRecordingState(false) }
-        override fun onError(error: Int) { setRecordingState(false) }
-        override fun onResults(results: Bundle?) {
-            val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-            if (!matches.isNullOrEmpty()) {
-                onResult(matches[0])
-            }
-        }
-        override fun onPartialResults(partialResults: Bundle?) {}
-        override fun onEvent(eventType: Int, params: Bundle?) {}
-    })
-
-    speechRecognizer.startListening(intent)
 }
