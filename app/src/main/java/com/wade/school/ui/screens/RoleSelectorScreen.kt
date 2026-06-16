@@ -40,6 +40,7 @@ fun RoleSelectorScreen(
     viewModel: CounselorViewModel = viewModel()
 ) {
     val schoolConfig by viewModel.schoolConfig.collectAsState()
+    val isDataLoaded by viewModel.isDataLoaded.collectAsState() // 新增觀察資料載入狀態
     val isConfigured = schoolConfig.accessPin != null
     val context = LocalContext.current
     val activity = context as? FragmentActivity
@@ -47,8 +48,9 @@ fun RoleSelectorScreen(
     var showSetupDialog by remember { mutableStateOf(false) }
     var showPinGate by remember { mutableStateOf<String?>(null) } // Store role ID being gated
 
-    LaunchedEffect(isConfigured) {
-        if (!isConfigured) {
+    LaunchedEffect(isDataLoaded, isConfigured) {
+        // 等待資料載入完畢，且確定未設定時再彈出視窗
+        if (isDataLoaded && !isConfigured) {
             showSetupDialog = true
         }
     }
@@ -63,25 +65,20 @@ fun RoleSelectorScreen(
         )
     }
 
-    if (showPinGate != null) {
-        PinGateDialog(
-            onDismiss = { showPinGate = null },
-            onSuccess = { 
-                val roleId = showPinGate!!
-                showPinGate = null
-                onRoleSelected(roleId)
-            },
-            viewModel = viewModel,
-            useBiometric = schoolConfig.useBiometric
-        )
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    // 當資料尚未載入時，可以顯示一個 Loading 畫面防止閃爍
+    if (!isDataLoaded) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else {
+        // 原有的 UI
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // ... (其餘 UI 程式碼保持不變)
         Spacer(modifier = Modifier.height(48.dp))
         Text(
             text = if (schoolConfig.ownerName != null) "您好，${schoolConfig.ownerName} 老師" else "歡迎使用",

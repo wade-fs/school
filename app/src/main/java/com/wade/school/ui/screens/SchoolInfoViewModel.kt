@@ -164,20 +164,22 @@ class SchoolInfoViewModel(app: Application) : AndroidViewModel(app) {
                     val announcements = mutableListOf<SchoolAnnouncement>()
                     
                     // 方式 1: Table 結構 (Rpage/iSchool 常見)
-                    doc.select("table tr").forEach { row ->
-                        val cells = row.select("td")
-                        if (cells.size >= 2) {
-                            val possibleDates = cells.map { it.text().trim() }.filter {
-                                it.matches(Regex(""".*\d{4}[-/]\d{2}[-/]\d{2}.*|.*\d{3}[-/]\d{2}[-/]\d{2}.*"""))
-                            }
-                            
-                            if (possibleDates.isNotEmpty()) {
-                                val dateText = possibleDates.first()
-                                val link = row.selectFirst("a")
-                                val title = link?.text()?.trim() ?: cells.firstOrNull { it.text().trim() != dateText }?.text()?.trim() ?: "公告"
-                                val href = link?.attr("href") ?: ""
-                                val fullUrl = urljoin(url, href)
-                                announcements.add(SchoolAnnouncement("公告", title, dateText, fullUrl))
+                    doc.select("table").forEach { table ->
+                        table.select("tr").forEach { row ->
+                            val cells = row.select("td")
+                            if (cells.size >= 2) {
+                                val possibleDates = cells.map { it.text().trim() }.filter {
+                                    it.matches(Regex(""".*\d{4}[-/]\d{2}[-/]\d{2}.*|.*\d{3}[-/]\d{2}[-/]\d{2}.*"""))
+                                }
+                                
+                                if (possibleDates.isNotEmpty()) {
+                                    val dateText = possibleDates.first()
+                                    val link = row.selectFirst("a")
+                                    val title = link?.text()?.trim() ?: cells.firstOrNull { it.text().trim() != dateText }?.text()?.trim() ?: "公告"
+                                    val href = link?.attr("href") ?: ""
+                                    val fullUrl = urljoin(url, href)
+                                    announcements.add(SchoolAnnouncement("公告", title, dateText, fullUrl))
+                                }
                             }
                         }
                     }

@@ -47,8 +47,14 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // ── 學校設定 ──────────────────────────────────────────────────────────────
+    private val _isDataLoaded = MutableStateFlow(false)
+    val isDataLoaded: StateFlow<Boolean> = _isDataLoaded
+
     val schoolConfig: StateFlow<SchoolConfig> = dao.getSchoolConfig()
-        .map { it ?: SchoolConfig() }
+        .map { 
+            _isDataLoaded.value = true
+            it ?: SchoolConfig() 
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SchoolConfig())
 
     fun updateSchoolConfig(
