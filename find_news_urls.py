@@ -28,8 +28,8 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 # 關鍵字
-TEXT_KEYWORDS = ["最新消息", "校務公告", "學校公告", "公告訊息", "公告事項", "行政公告", "NEWS", "公告", "更多", "MORE", "+", "ALL", "彙整", "全部", "更多公告"]
-URL_KEYWORDS = ['site_news', '/p/4', 'news', 'bulletin', 'announcement', 'board', 'main2.php']
+TEXT_KEYWORDS = ["最新消息", "校務公告", "學校公告", "公告訊息", "公告事項", "行政公告", "NEWS", "公告", "更多", "MORE", "+", "ALL", "彙整", "全部", "更多公告", "MAIN_NEWS"]
+URL_KEYWORDS = ['site_news', '/p/4', 'news', 'bulletin', 'announcement', 'board', 'main2.php', 'main_news']
 
 def is_valid_url(url):
     try:
@@ -71,33 +71,41 @@ def check_is_announcement_page(html, url):
 
     # ── 強烈特徵 ──
     if 'site_news/main' in url_lower:
-        score += 40
+        score += 15
     elif '/p/428-' in url_lower:
-        score += 50
+        score += 20
     elif re.search(r'/p/4\d{2}-\d+-\d+\.php', url_lower):
-        score += 25
+        score += 5
     
     # ── 懲罰特徵 (單篇文章/非清單頁) ──
     if re.search(r'/p/[1-3]\d{2}-', url_lower) or 'aid=' in url_lower or 'cid=' in url_lower:
         score -= 30
 
     # ── 評分機制 ──
+    # 評分一：核心關鍵字
     score += sum(15 for kw in ["最新消息", "校務公告", "學校公告", "公告訊息", "公告事項", "行政公告", "NEWS", "公告", "彙整", "全部公告", "公告模組", "公佈欄"] if kw in text)
-    units = ["教務", "學務", "總務", "輔導", "圖書", "人事", "教學", "註冊", "訓育", "資訊", "設備", "校長室", "秘書", "特教"]
-    score += sum(2 for u in units if u in text)
     
+    # 評分二：是否包含常見的處室單位名稱
+    units = ["教務", "學務", "總務", "輔導", "圖書", "人事", "教學", "註冊", "訓育", "資訊", "設備", "校長室", "秘書", "特教"]
+    unit_count = sum(1 for u in units if u in text)
+    score += unit_count * 2 # 每個單位加二分
+    
+    # 評分三：找尋多個日期格式
     date_pattern = re.compile(r'((?:11[0-9]|202[0-9])[/\-\.][0-1][0-9][/\-\.][0-3][0-9])')
     dates_count = len(set(date_pattern.findall(text)))
     score += dates_count * 2
         
+    # 評分四：檢查條列式結構
     list_items = len(soup.find_all('tr')) + (len(soup.find_all('li')) // 2) + (len(soup.find_all('div', class_=re.compile(r'item|row|list', re.I))) // 5)
     if list_items >= 5: score += 10
             
     if soup.find(class_=re.compile(r'news|announcement|list|cg-list', re.I)):
         score += 10
 
+    # ── 分頁特徵 ──
     pagination_keywords = ["第一頁", "最後一頁", "上一頁", "下一頁", "頁次：", "Next", "Previous", "Last Page", "First Page", "總共"]
-    if sum(1 for p in pagination_keywords if p.upper() in text.upper()) >= 1 or re.search(r'\[\s*\d+\s*\]', text) or re.search(r'第\s*\d+\s*頁', text) or re.search(r'共\s*\d+\s*頁', text):
+    pagi_match = sum(1 for p in pagination_keywords if p.upper() in text.upper())
+    if pagi_match >= 1 or re.search(r'\[\s*\d+\s*\]', text) or re.search(r'第\s*\d+\s*頁', text) or re.search(r'共\s*\d+\s*頁', text):
         score += 30 
 
     return score
@@ -121,6 +129,7 @@ def process_school(school_name, base_url):
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
 
     try:
+        # 第一階段：請求並處理跳轉
         res = requests.get(base_url, headers=headers, timeout=10, verify=False)
         actual_url = res.url 
         res.encoding = res.apparent_encoding 
@@ -172,6 +181,7 @@ def process_school(school_name, base_url):
         seen_urls = {actual_url}
         base_netloc = urlparse(actual_url).netloc
         
+        # 加入預測出的 CMS 連結
         for cms_url in guess_cms_urls(actual_url, soup):
             if cms_url not in seen_urls:
                 candidate_pool.append((100, cms_url))
@@ -192,11 +202,18 @@ def process_school(school_name, base_url):
                     if base_netloc.replace('www.', '') in candidate_netloc:
                         seen_urls.add(full_url)
                         priority = 0
-                        if any(kw in combined_text for kw in ["更多", "全部", "MORE", "ALL", "彙整"]): priority = 20
-                        elif any(kw in combined_text for kw in ["公告", "NEWS"]): priority = 15
-                        elif 'site_news/main' in full_url.lower(): priority = 10
-                        elif '/p/4' in full_url.lower(): priority = 5
-                        if priority > 0: candidate_pool.append((priority, full_url))
+                        # 核心邏輯：極度優先處理「彙整」、「全部」、「更多」
+                        if any(kw in combined_text for kw in ["更多", "全部", "MORE", "ALL", "彙整"]):
+                            priority = 20
+                        elif any(kw in combined_text for kw in ["公告", "NEWS"]):
+                            priority = 15
+                        elif 'site_news/main' in full_url.lower() or 'main_news' in full_url.lower():
+                            priority = 12
+                        elif '/p/4' in full_url.lower():
+                            priority = 5
+                        
+                        if priority > 0:
+                            candidate_pool.append((priority, full_url))
                     
         candidate_pool.sort(key=lambda x: x[0], reverse=True)
         candidates = [url for p, url in candidate_pool]

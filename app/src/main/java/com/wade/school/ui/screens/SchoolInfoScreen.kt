@@ -211,13 +211,24 @@ fun SchoolInfoScreen(
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error)
-                            Spacer(Modifier.width(8.dp))
-                            Text(err, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error)
+                                Spacer(Modifier.width(8.dp))
+                                Text(err, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                            }
+                            // 即使錯誤，也顯示官網連結
+                            val website = state.selectedSchool?.homeUrl ?: state.config?.schoolWebsite
+                            if (!website.isNullOrBlank()) {
+                                SchoolInfoRow(
+                                    icon = { Icon(Icons.Default.Language, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary) },
+                                    label = "前往官網手動查詢",
+                                    onClick = {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(website))
+                                        context.startActivity(intent)
+                                    }
+                                )
+                            }
                         }
                     }
                 }

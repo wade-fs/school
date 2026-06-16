@@ -213,12 +213,13 @@ class SchoolInfoViewModel(app: Application) : AndroidViewModel(app) {
                     currentPage = page,
                     totalPages = totalPages,
                     isLoadingAnnouncements = false,
-                    announcementError = if (items.isEmpty()) "無法取得公告，請確認網路或校網架構。" else null
+                    announcementError = if (items.isEmpty()) "無法自動解析公告列表，請直接前往官網查閱。" else null
                 )
             } catch (e: Exception) {
+                android.util.Log.e("SchoolInfoViewModel", "Announcement load failed", e)
                 _state.value = _state.value.copy(
                     isLoadingAnnouncements = false,
-                    announcementError = "載入失敗：${e.message}"
+                    announcementError = "無法自動解析公告列表，請直接前往官網查閱。"
                 )
             }
         }
