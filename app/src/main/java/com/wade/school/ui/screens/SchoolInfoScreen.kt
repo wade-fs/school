@@ -31,6 +31,7 @@ fun SchoolInfoScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    var showSchoolSelector by remember { mutableStateOf(false) }
 
     // 計算目前篩選後的公告和可用 tag
     val filtered = remember(state.announcements, state.selectedTag) {
@@ -40,17 +41,31 @@ fun SchoolInfoScreen(
         viewModel.availableTags()
     }
 
+    if (showSchoolSelector) {
+        SchoolSelectorDialog(
+            schools = state.availableSchools,
+            onDismiss = { showSchoolSelector = false },
+            onSelect = {
+                viewModel.selectSchool(it)
+                showSchoolSelector = false
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.config?.schoolName ?: "學校資訊") },
+                title = { Text(state.selectedSchool?.name ?: "學校資訊") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.loadAnnouncements(state.currentPage) }) {
+                    IconButton(onClick = { showSchoolSelector = true }) {
+                        Icon(Icons.Default.SwapHoriz, contentDescription = "切換學校")
+                    }
+                    IconButton(onClick = { state.selectedSchool?.let { viewModel.loadAnnouncements(it, state.currentPage) } }) {
                         Icon(Icons.Default.Refresh, contentDescription = "重新整理")
                     }
                 }
@@ -83,7 +98,7 @@ fun SchoolInfoScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = state.config?.schoolName ?: "—",
+                                text = state.selectedSchool?.name ?: "—",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -92,7 +107,7 @@ fun SchoolInfoScreen(
                         Spacer(Modifier.height(12.dp))
 
                         // 官網
-                        val website = state.config?.schoolWebsite
+                        val website = state.selectedSchool?.homeUrl ?: state.config?.schoolWebsite
                         if (!website.isNullOrBlank()) {
                             SchoolInfoRow(
                                 icon = { Icon(Icons.Default.Language, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) },
@@ -104,8 +119,21 @@ fun SchoolInfoScreen(
                             )
                         }
 
+                        // 公告網址 (顯示目前的來源)
+                        val announceUrl = state.selectedSchool?.announcementUrl
+                        if (!announceUrl.isNullOrBlank()) {
+                            SchoolInfoRow(
+                                icon = { Icon(Icons.Default.OpenInNew, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) },
+                                label = "開啟公告網頁",
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(announceUrl))
+                                    context.startActivity(intent)
+                                }
+                            )
+                        }
+
                         // 地址 → Google Maps
-                        val address = state.config?.address ?: state.school?.address
+                        val address = state.selectedSchool?.address ?: state.config?.address
                         if (!address.isNullOrBlank()) {
                             SchoolInfoRow(
                                 icon = { Icon(Icons.Default.Place, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.secondary) },
@@ -117,7 +145,6 @@ fun SchoolInfoScreen(
                                     if (intent.resolveActivity(context.packageManager) != null) {
                                         context.startActivity(intent)
                                     } else {
-                                        // 沒裝 Google Maps → 用瀏覽器
                                         val webUri = Uri.parse("https://www.google.com/maps/search/?api=1&query=${Uri.encode(address)}")
                                         context.startActivity(Intent(Intent.ACTION_VIEW, webUri))
                                     }
@@ -126,7 +153,7 @@ fun SchoolInfoScreen(
                         }
 
                         // 電話
-                        val phone = state.config?.phone ?: state.school?.phone
+                        val phone = state.selectedSchool?.phone ?: state.config?.phone
                         if (!phone.isNullOrBlank()) {
                             SchoolInfoRow(
                                 icon = { Icon(Icons.Default.Phone, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.secondary) },
@@ -195,16 +222,6 @@ fun SchoolInfoScreen(
                             Text(err, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         }
                     }
-
-                    // 未設定官網時顯示設定提示
-                    if (state.config?.schoolWebsite.isNullOrBlank()) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "請先在「全校性設定」中填入學校官網網址，系統才能自動抓取公告。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
 
@@ -261,6 +278,59 @@ fun SchoolInfoScreen(
             item { Spacer(Modifier.height(32.dp)) }
         }
     }
+}
+
+@Composable
+fun SchoolSelectorDialog(
+    schools: List<SchoolWithAnnouncement>,
+    onDismiss: () -> Unit,
+    onSelect: (SchoolWithAnnouncement) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredSchools = remember(searchQuery, schools) {
+        if (searchQuery.isBlank()) schools
+        else schools.filter { it.name.contains(searchQuery) || it.city.contains(searchQuery) }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("選擇學校") },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("搜尋學校名稱或縣市") },
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(12.dp))
+                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                    items(filteredSchools) { school ->
+                        ListItem(
+                            headlineContent = { Text(school.name) },
+                            supportingContent = { Text(school.city) },
+                            leadingContent = { Icon(Icons.Default.School, null) },
+                            modifier = Modifier.clickable { onSelect(school) }
+                        )
+                    }
+                    if (filteredSchools.isEmpty()) {
+                        item {
+                            Text(
+                                "找不到符合條件且有公告網址的學校",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
 }
 
 @Composable

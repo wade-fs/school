@@ -13,6 +13,17 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
+import java.io.BufferedReader
+import java.io.InputStreamReader
+
+data class SchoolWithAnnouncement(
+    val name: String,
+    val homeUrl: String,
+    val announcementUrl: String,
+    val city: String = "",
+    val address: String = "",
+    val phone: String = ""
+)
 
 data class SchoolAnnouncement(
     val tag: String,
@@ -22,14 +33,15 @@ data class SchoolAnnouncement(
 )
 
 data class SchoolInfoUiState(
-    val school: MoeSchool? = null,
-    val config: SchoolConfig? = null,
+    val selectedSchool: SchoolWithAnnouncement? = null,
+    val availableSchools: List<SchoolWithAnnouncement> = emptyList(),
     val announcements: List<SchoolAnnouncement> = emptyList(),
     val isLoadingAnnouncements: Boolean = false,
     val announcementError: String? = null,
     val currentPage: Int = 1,
     val totalPages: Int = 1,
-    val selectedTag: String = "全部"
+    val selectedTag: String = "全部",
+    val config: SchoolConfig? = null
 )
 
 class SchoolInfoViewModel(app: Application) : AndroidViewModel(app) {
@@ -39,74 +51,161 @@ class SchoolInfoViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<SchoolInfoUiState> = _state
 
     init {
-        viewModelScope.launch {
-            val config = db.counselorDao().getSchoolConfig().first()
-            _state.value = _state.value.copy(config = config)
+        loadSchoolsAndInitialize()
+    }
 
-            // 用校名從 moe_schools 找出完整資料
-            config?.schoolName?.let { name ->
-                val moe = db.counselorDao().searchSchools(name).first().firstOrNull()
-                _state.value = _state.value.copy(school = moe)
+    private fun loadSchoolsAndInitialize() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val config = db.counselorDao().getSchoolConfig().first()
+            
+            // Load schools from high.csv in assets
+            val allSchools = loadSchoolsFromAssets()
+            val filteredSchools = allSchools.filter { it.announcementUrl.isNotBlank() }
+            
+            // Default to current school
+            val currentSchoolName = config?.schoolName ?: ""
+            var initialSchool = filteredSchools.find { it.name == currentSchoolName }
+            
+            // If not found in filtered list, try to create one from config
+            if (initialSchool == null && !config?.schoolWebsite.isNullOrBlank()) {
+                initialSchool = SchoolWithAnnouncement(
+                    name = config?.schoolName ?: "本校",
+                    homeUrl = config?.schoolWebsite ?: "",
+                    announcementUrl = config?.schoolWebsite ?: "", // Fallback
+                    city = "",
+                    address = config?.address ?: "",
+                    phone = config?.phone ?: ""
+                )
             }
 
-            // 根據 config 裡的官網推導公告 URL
-            loadAnnouncements(page = 1)
+            withContext(Dispatchers.Main) {
+                _state.value = _state.value.copy(
+                    config = config,
+                    availableSchools = filteredSchools,
+                    selectedSchool = initialSchool
+                )
+                
+                if (initialSchool != null) {
+                    loadAnnouncements(initialSchool, page = 1)
+                }
+            }
         }
     }
 
-    /**
-     * 依學校官網 URL 推導彙整公告頁。
-     *
-     * 已知台灣校務行政系統（校園網站）的公告頁 URL 格式：
-     *   https://<domain>/p/428-1000-<page>.php
-     * 其中 428 = 「彙整公告模組」的固定 module id。
-     */
-    private fun buildAnnouncementListUrl(baseUrl: String, page: Int): String {
-        val clean = baseUrl.trimEnd('/')
-        return "$clean/p/428-1000-$page.php"
+    private fun loadSchoolsFromAssets(): List<SchoolWithAnnouncement> {
+        val result = mutableListOf<SchoolWithAnnouncement>()
+        try {
+            getApplication<Application>().assets.open("high.csv").use { inputStream ->
+                val reader = BufferedReader(InputStreamReader(inputStream))
+                reader.readLine() // skip header
+                reader.forEachLine { line ->
+                    val tokens = line.split(",").map { it.trim().removeSurrounding("\"") }
+                    if (tokens.size >= 9) {
+                        val name = tokens[2]
+                        val homeUrl = tokens[7]
+                        val announceUrl = tokens[8]
+                        if (name.isNotBlank()) {
+                            result.add(SchoolWithAnnouncement(
+                                name = name,
+                                homeUrl = homeUrl,
+                                announcementUrl = announceUrl,
+                                city = tokens[4].replace(Regex("\\[.*?\\]"), ""),
+                                address = tokens[5].replace(Regex("\\[.*?\\]"), ""),
+                                phone = tokens[6]
+                            ))
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SchoolInfoViewModel", "Error loading high.csv", e)
+        }
+        return result
     }
 
-    fun loadAnnouncements(page: Int = 1) {
-        val baseUrl = _state.value.config?.schoolWebsite ?: return
+    fun selectSchool(school: SchoolWithAnnouncement) {
+        _state.value = _state.value.copy(
+            selectedSchool = school,
+            announcements = emptyList(),
+            announcementError = null,
+            currentPage = 1,
+            totalPages = 1
+        )
+        loadAnnouncements(school, page = 1)
+    }
+
+    fun loadAnnouncements(school: SchoolWithAnnouncement, page: Int = 1) {
+        val rawUrl = school.announcementUrl
+        if (rawUrl.isBlank()) return
+        
         _state.value = _state.value.copy(isLoadingAnnouncements = true, announcementError = null)
 
         viewModelScope.launch {
             try {
-                val url = buildAnnouncementListUrl(baseUrl, page)
+                // If it's a generic Rpage site and doesn't end with a specific page number, try to append page logic
+                val url = if (rawUrl.contains("/p/428-1000-") && rawUrl.endsWith(".php")) {
+                    rawUrl.replace(Regex("""/p/428-1000-\d+\.php"""), "/p/428-1000-$page.php")
+                } else if (rawUrl.contains("/p/428-1000-")) {
+                    // Just a guess if it contains the pattern but not the full filename
+                    rawUrl.substringBefore("/p/428-1000-") + "/p/428-1000-$page.php"
+                } else {
+                    // For others, we might only support page 1 or have to implement custom logic
+                    rawUrl
+                }
+
                 val (items, totalPages) = withContext(Dispatchers.IO) {
                     val doc = Jsoup.connect(url)
-                        .userAgent("Mozilla/5.0 (Android 14; Mobile)")
-                        .timeout(12_000)
+                        .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                        .timeout(15_000)
                         .get()
 
-                    // 解析公告 table：每 row 3 格 = tag / title / date
-                    val rows = doc.select("table tr").filter { row ->
+                    // 解析公告 table 或 list
+                    // 我們使用更寬鬆的解析方式
+                    val announcements = mutableListOf<SchoolAnnouncement>()
+                    
+                    // 方式 1: Table 結構 (Rpage/iSchool 常見)
+                    doc.select("table tr").forEach { row ->
                         val cells = row.select("td")
-                        cells.size == 3 &&
-                            cells[2].text().trim().matches(Regex("""\d{4}-\d{2}-\d{2}"""))
+                        if (cells.size >= 2) {
+                            val dateCell = cells.last()
+                            val dateText = dateCell?.text()?.trim() ?: ""
+                            if (dateText.matches(Regex(""".*\d{4}[-/]\d{2}[-/]\d{2}.*|.*\d{3}[-/]\d{2}[-/]\d{2}.*"""))) {
+                                val link = row.selectFirst("a")
+                                val title = link?.text()?.trim() ?: cells[0].text().trim()
+                                val href = link?.attr("href") ?: ""
+                                val fullUrl = urljoin(url, href)
+                                val tag = if (cells.size >= 3) cells[0].text().trim() else "公告"
+                                announcements.add(SchoolAnnouncement(tag, title, dateText, fullUrl))
+                            }
+                        }
                     }
 
-                    val announcements = rows.map { row ->
-                        val cells = row.select("td")
-                        val tag   = cells[0].text().trim()
-                        val link  = cells[1].selectFirst("a")
-                        val title = link?.text()?.trim() ?: cells[1].text().trim()
-                        val href  = link?.attr("href") ?: ""
-                        val date  = cells[2].text().trim()
-                        val clean2 = baseUrl.trimEnd('/')
-                        val fullUrl = if (href.startsWith("http")) href else "$clean2$href"
-                        SchoolAnnouncement(tag, title, date, fullUrl)
+                    // 方式 2: 如果 Table 沒抓到，試試 li
+                    if (announcements.isEmpty()) {
+                        doc.select("li").forEach { li ->
+                            val link = li.selectFirst("a")
+                            val text = li.text()
+                            if (link != null && text.matches(Regex(""".*\d{4}[-/]\d{2}[-/]\d{2}.*|.*\d{3}[-/]\d{2}[-/]\d{2}.*"""))) {
+                                val title = link.text().trim()
+                                val href = link.attr("href")
+                                val fullUrl = urljoin(url, href)
+                                // 嘗試從文字中提取日期
+                                val date = Regex("""\d{4}[-/]\d{2}[-/]\d{2}|\d{3}[-/]\d{2}[-/]\d{2}""").find(text)?.value ?: ""
+                                announcements.add(SchoolAnnouncement("公告", title, date, fullUrl))
+                            }
+                        }
                     }
 
-                    // 解析分頁
-                    val pageLinks = doc.select("a[href]")
-                        .map { it.attr("href") }
-                        .filter { it.contains("/p/428-1000-") }
-                    val maxPage = pageLinks
-                        .mapNotNull { Regex("""/p/428-1000-(\d+)\.php""").find(it)?.groupValues?.get(1)?.toIntOrNull() }
-                        .maxOrNull() ?: page
+                    // 解析分頁 (Rpage 特色)
+                    val maxPage = if (url.contains("/p/428-1000-")) {
+                        val pageLinks = doc.select("a[href]")
+                            .map { it.attr("href") }
+                            .filter { it.contains("/p/428-1000-") }
+                        pageLinks.mapNotNull { Regex("""/p/428-1000-(\d+)\.php""").find(it)?.groupValues?.get(1)?.toIntOrNull() }
+                            .maxOrNull() ?: page
+                    } else page
 
-                    Pair(announcements, maxPage)
+                    Pair(announcements.distinctBy { it.url }, maxPage)
                 }
 
                 _state.value = _state.value.copy(
@@ -114,25 +213,39 @@ class SchoolInfoViewModel(app: Application) : AndroidViewModel(app) {
                     currentPage = page,
                     totalPages = totalPages,
                     isLoadingAnnouncements = false,
-                    announcementError = if (items.isEmpty()) "無法取得公告，請確認網路或學校官網設定。" else null
+                    announcementError = if (items.isEmpty()) "無法取得公告，請確認網路或校網架構。" else null
                 )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     isLoadingAnnouncements = false,
-                    announcementError = "網路錯誤：${e.message}"
+                    announcementError = "載入失敗：${e.message}"
                 )
             }
         }
     }
 
+    private fun urljoin(base: String, relative: String): String {
+        if (relative.startsWith("http")) return relative
+        return try {
+            val baseUrl = java.net.URL(base)
+            java.net.URL(baseUrl, relative).toString()
+        } catch (e: Exception) {
+            relative
+        }
+    }
+
     fun nextPage() {
         val s = _state.value
-        if (s.currentPage < s.totalPages) loadAnnouncements(s.currentPage + 1)
+        if (s.currentPage < s.totalPages && s.selectedSchool != null) {
+            loadAnnouncements(s.selectedSchool, s.currentPage + 1)
+        }
     }
 
     fun prevPage() {
         val s = _state.value
-        if (s.currentPage > 1) loadAnnouncements(s.currentPage - 1)
+        if (s.currentPage > 1 && s.selectedSchool != null) {
+            loadAnnouncements(s.selectedSchool, s.currentPage - 1)
+        }
     }
 
     fun selectTag(tag: String) {
