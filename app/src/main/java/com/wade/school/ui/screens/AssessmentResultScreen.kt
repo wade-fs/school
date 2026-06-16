@@ -1,8 +1,11 @@
 package com.wade.school.ui.screens
 
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,7 +15,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wade.school.data.local.entity.AssessmentResponse
-
+import com.wade.school.util.AssessmentReportGenerator
+import androidx.compose.ui.platform.LocalContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssessmentResultScreen(
@@ -23,6 +27,9 @@ fun AssessmentResultScreen(
     viewModel: CounselorViewModel = viewModel()
 ) {
     val response by viewModel.getAssessmentResponse(sessionId, studentId).collectAsState(initial = null)
+    val questions by viewModel.getQuestions(templateId).collectAsState(initial = emptyList())
+    val context = LocalContext.current
+
     
     Scaffold(
         topBar = {
@@ -39,6 +46,27 @@ fun AssessmentResultScreen(
                 item {
                     Text("受測日期: ${java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(res.completedAt))}")
                     Spacer(modifier = Modifier.height(16.dp))
+            
+            val studentName = viewModel.getStudentNameById(studentId)
+            
+            Button(onClick = {
+                val reportUri = AssessmentReportGenerator.generatePhq9ExcelReport(
+                    context,
+                    res,
+                    questions ?: emptyList(), // Pass loaded questions
+                    studentName
+                )
+                reportUri?.let { uri ->
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "分享報告"))
+                } ?: Toast.makeText(context, "報表生成失敗", Toast.LENGTH_SHORT).show()
+            }) {
+                Text("匯出 PHQ-9 報告")
+            }
                     
                     when (templateId) {
                         "PHQ9_TW", "GAD7_TW" -> RiskScoreView(res)

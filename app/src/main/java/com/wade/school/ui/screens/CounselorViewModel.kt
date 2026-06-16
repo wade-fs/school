@@ -523,6 +523,10 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         catch (e: Exception) { "解密失敗" }
     }
 
+    fun getStudentNameById(studentId: String): String {
+        return students.value.find { it.studentId == studentId }?.name ?: "未知學生"
+    }
+
     // ── 心情溫度計 ────────────────────────────────────────────────────────────
     private val _activeSessionId = MutableStateFlow<Int?>(null)
     val activeSessionId: StateFlow<Int?> = _activeSessionId
