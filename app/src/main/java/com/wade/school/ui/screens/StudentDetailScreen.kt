@@ -68,7 +68,7 @@ fun StudentDetailScreen(
             title = { Text("編輯學生狀態") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val statusOptions = listOf("Active", "休學", "轉學", "結案", "外部轉介")
+                    val statusOptions = listOf("Active", "定期追蹤", "休學", "轉學", "結案", "外部轉介")
                     var expandedStatus by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(
                         expanded = expandedStatus,
@@ -95,13 +95,31 @@ fun StudentDetailScreen(
                         }
                     }
 
-                    Text("風險等級", style = MaterialTheme.typography.labelSmall)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        listOf("Normal", "Low", "Medium", "High").forEach { p ->
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { editPriority = p }) {
-                                RadioButton(selected = editPriority == p, onClick = { editPriority = p })
-                                Text(p, fontSize = 12.sp)
+                    Text("風險等級 (1-5)", style = MaterialTheme.typography.labelSmall)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        val priorities = listOf("1", "2", "3", "4", "5")
+                        
+                        priorities.forEach { p ->
+                            val color = when (p) {
+                                "1" -> androidx.compose.ui.graphics.Color(0xFF4CAF50) // Green
+                                "2" -> androidx.compose.ui.graphics.Color(0xFF8BC34A) // Light Green
+                                "3" -> androidx.compose.ui.graphics.Color(0xFFFFEB3B) // Yellow
+                                "4" -> androidx.compose.ui.graphics.Color(0xFFFF9800) // Orange
+                                else -> androidx.compose.ui.graphics.Color(0xFFF44336) // Red
                             }
+                            
+                            FilterChip(
+                                selected = editPriority == p,
+                                onClick = { editPriority = p },
+                                label = { Text(p, fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = color.copy(alpha = 0.7f),
+                                    containerColor = color.copy(alpha = 0.2f)
+                                )
+                            )
                         }
                     }
 
@@ -221,6 +239,22 @@ fun StudentDetailScreen(
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回") }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT, "輔導紀錄: $studentName")
+                            putExtra(Intent.EXTRA_TEXT, "學生: $studentName ($studentId)\n\n紀錄:\n" + logs.joinToString("\n---\n") { viewModel.decryptLogContent(it) })
+                            setPackage("com.google.android.gm") // 嘗試指定 Gmail
+                        }
+                        try {
+                            context.startActivity(shareIntent)
+                        } catch (e: Exception) {
+                            // 若無 Gmail 則用通用分享
+                            context.startActivity(Intent.createChooser(shareIntent, "分享輔導紀錄"))
+                        }
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "分享紀錄")
+                    }
                     IconButton(onClick = {
                         if (sessionText.isNotBlank()) {
                             viewModel.saveCaseLog(studentId, sessionText)
