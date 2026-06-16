@@ -57,25 +57,50 @@ fun AssessmentSessionScreen(
             
             Spacer(modifier = Modifier.weight(1f))
             
-            Button(
-                onClick = {
-                    selectedClass?.let { className ->
-                        val sessionId = UUID.randomUUID().toString()
-                        val session = AssessmentSession(
-                            sessionId = sessionId,
-                            templateId = templateId,
-                            targetClass = className,
-                            conductedBy = "counselor_01",
-                            scheduledAt = System.currentTimeMillis()
-                        )
-                        viewModel.startAssessmentSession(session)
-                        onNavigateToStudentPicker(sessionId, templateId, className)
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = selectedClass != null
-            ) {
-                Text("選擇學生並開始")
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        selectedClass?.let { className ->
+                            val sessionId = UUID.randomUUID().toString()
+                            val session = AssessmentSession(
+                                sessionId = sessionId,
+                                templateId = templateId,
+                                targetClass = className,
+                                conductedBy = "counselor_01",
+                                scheduledAt = System.currentTimeMillis()
+                            )
+                            viewModel.startAssessmentSession(session)
+                            onNavigateToStudentPicker(sessionId, templateId, className)
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = selectedClass != null
+                ) {
+                    Text("選學生施測")
+                }
+                
+                Button(
+                    onClick = {
+                        selectedClass?.let { className ->
+                            val sessionId = UUID.randomUUID().toString()
+                            val session = AssessmentSession(
+                                sessionId = sessionId,
+                                templateId = templateId,
+                                targetClass = className,
+                                conductedBy = "counselor_01",
+                                scheduledAt = System.currentTimeMillis()
+                            )
+                            viewModel.startAssessmentSession(session)
+                            android.widget.Toast.makeText(context, "已對全班發起施測: $className", android.widget.Toast.LENGTH_SHORT).show()
+                            onBack()
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = selectedClass != null,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) {
+                    Text("全班發起")
+                }
             }
         }
     }
