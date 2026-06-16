@@ -65,6 +65,19 @@ fun RoleSelectorScreen(
         )
     }
 
+    if (showPinGate != null) {
+        PinGateDialog(
+            onDismiss = { showPinGate = null },
+            onSuccess = { 
+                val roleId = showPinGate!!
+                showPinGate = null
+                onRoleSelected(roleId)
+            },
+            viewModel = viewModel,
+            useBiometric = schoolConfig.useBiometric
+        )
+    }
+
     // 當資料尚未載入時，可以顯示一個 Loading 畫面防止閃爍
     if (!isDataLoaded) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {

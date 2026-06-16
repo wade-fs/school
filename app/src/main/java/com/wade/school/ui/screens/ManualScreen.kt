@@ -1,5 +1,7 @@
 package com.wade.school.ui.screens
 
+import android.widget.TextView
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -10,8 +12,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import androidx.compose.ui.viewinterop.AndroidView
+import io.noties.markwon.Markwon
+import io.noties.markwon.ext.strikethrough.StrikethroughPlugin
+import io.noties.markwon.ext.tables.TablePlugin
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -19,12 +23,18 @@ fun ManualScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var manualContent by remember { mutableStateOf("載入中...") }
 
+    // 初始化 Markwon
+    val markwon = remember {
+        Markwon.builder(context)
+            .usePlugin(StrikethroughPlugin.create())
+            .usePlugin(TablePlugin.create(context))
+            .build()
+    }
+
     LaunchedEffect(Unit) {
-        // 從 assets 讀取 USER_MANUAL.md
-        // 請確保您已將 docs/USER_MANUAL.md 複製到 app/src/main/assets/USER_MANUAL.md
         try {
             context.assets.open("USER_MANUAL.md").use { inputStream ->
-                manualContent = inputStream.bufferedReader().use(BufferedReader::readText)
+                manualContent = inputStream.bufferedReader().use { it.readText() }
             }
         } catch (e: Exception) {
             manualContent = "無法載入使用手冊: ${e.message}"
@@ -42,24 +52,30 @@ fun ManualScreen(onBack: () -> Unit) {
                 }
             )
         }
-    ) {
-        // 簡單的 Markdown 顯示方式 (處理標題與分段)
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(it)
+                .padding(paddingValues)
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            manualContent.split("\n").forEach { line ->
-                when {
-                    line.startsWith("# ") -> Text(line.removePrefix("# "), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 8.dp, bottom = 8.dp))
-                    line.startsWith("## ") -> Text(line.removePrefix("## "), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 4.dp, bottom = 4.dp))
-                    line.startsWith("* ") -> Text("• ${line.removePrefix("* ")}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 16.dp, top = 2.dp, bottom = 2.dp))
-                    line.startsWith("|") -> {} // 簡單過濾表格，後續可擴充
-                    line.isBlank() -> Spacer(modifier = Modifier.height(8.dp))
-                    else -> Text(line, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 2.dp, bottom = 2.dp))
-                }
+            // 將 AndroidView 放入一個水平滾動的 Box 中
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+            ) {
+                AndroidView(
+                    factory = { ctx ->
+                        TextView(ctx).apply {
+                            textSize = 16f
+                        }
+                    },
+                    update = { textView ->
+                        markwon.setMarkdown(textView, manualContent)
+                    }
+                )
             }
         }
     }
