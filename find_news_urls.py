@@ -50,7 +50,6 @@ def check_is_announcement_page(html, url):
     if total_links > 10 and (img_link_count / total_links) > 0.5:
         return -1 
 
-    # 排除通訊錄
     text_nospace = text.replace(" ", "")
     if "分機" in text_nospace:
         if "校長室" in text_nospace or "教務處" in text_nospace or "總務處" in text_nospace:
@@ -72,41 +71,33 @@ def check_is_announcement_page(html, url):
 
     # ── 強烈特徵 ──
     if 'site_news/main' in url_lower:
-        score += 15
+        score += 40
     elif '/p/428-' in url_lower:
-        score += 20
+        score += 50
     elif re.search(r'/p/4\d{2}-\d+-\d+\.php', url_lower):
-        score += 5
+        score += 25
     
     # ── 懲罰特徵 (單篇文章/非清單頁) ──
     if re.search(r'/p/[1-3]\d{2}-', url_lower) or 'aid=' in url_lower or 'cid=' in url_lower:
         score -= 30
 
     # ── 評分機制 ──
-    # 評分一：核心關鍵字
     score += sum(15 for kw in ["最新消息", "校務公告", "學校公告", "公告訊息", "公告事項", "行政公告", "NEWS", "公告", "彙整", "全部公告", "公告模組", "公佈欄"] if kw in text)
-    
-    # 評分二：是否包含常見的處室單位名稱
     units = ["教務", "學務", "總務", "輔導", "圖書", "人事", "教學", "註冊", "訓育", "資訊", "設備", "校長室", "秘書", "特教"]
-    unit_count = sum(1 for u in units if u in text)
-    score += unit_count * 2
+    score += sum(2 for u in units if u in text)
     
-    # 評分三：找尋多個日期格式
     date_pattern = re.compile(r'((?:11[0-9]|202[0-9])[/\-\.][0-1][0-9][/\-\.][0-3][0-9])')
     dates_count = len(set(date_pattern.findall(text)))
     score += dates_count * 2
         
-    # 評分四：檢查條列式結構
     list_items = len(soup.find_all('tr')) + (len(soup.find_all('li')) // 2) + (len(soup.find_all('div', class_=re.compile(r'item|row|list', re.I))) // 5)
     if list_items >= 5: score += 10
             
     if soup.find(class_=re.compile(r'news|announcement|list|cg-list', re.I)):
         score += 10
 
-    # ── 分頁特徵 ──
     pagination_keywords = ["第一頁", "最後一頁", "上一頁", "下一頁", "頁次：", "Next", "Previous", "Last Page", "First Page", "總共"]
-    pagi_match = sum(1 for p in pagination_keywords if p.upper() in text.upper())
-    if pagi_match >= 1 or re.search(r'\[\s*\d+\s*\]', text) or re.search(r'第\s*\d+\s*頁', text) or re.search(r'共\s*\d+\s*頁', text):
+    if sum(1 for p in pagination_keywords if p.upper() in text.upper()) >= 1 or re.search(r'\[\s*\d+\s*\]', text) or re.search(r'第\s*\d+\s*頁', text) or re.search(r'共\s*\d+\s*頁', text):
         score += 30 
 
     return score
@@ -130,7 +121,6 @@ def process_school(school_name, base_url):
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
 
     try:
-        # 第一階段：請求並處理跳轉
         res = requests.get(base_url, headers=headers, timeout=10, verify=False)
         actual_url = res.url 
         res.encoding = res.apparent_encoding 
@@ -147,16 +137,31 @@ def process_school(school_name, base_url):
                     soup = BeautifulSoup(res.text, 'html.parser')
                 except: pass
 
-        # 新增機制：如果首頁內容過於簡單，嘗試尋找「進入首頁」連結
-        if len(soup.get_text().strip()) < 500:
+        # 新增機制：如果首頁內容過於簡單 (可能是進入頁)，尋找可能為「真正首頁」的連結
+        if len(soup.get_text().strip()) < 2000:
             for a in soup.find_all('a', href=True):
-                if any(kw in a.get_text(strip=True).upper() for kw in ["進入首頁", "進入網站", "HOME", "APP/HOME", "進入"]):
-                    actual_url = urljoin(actual_url, a['href'])
+                href = a['href'].lower()
+                text = a.get_text(strip=True).upper()
+                if any(kw in href or kw in text for kw in ["APP/HOME", "HOME.PHP", "INDEX.PHP", "進入網站", "進入首頁", "回首頁"]):
+                    new_actual_url = urljoin(actual_url, a['href'])
                     try:
-                        res = requests.get(actual_url, headers=headers, timeout=10, verify=False)
+                        res = requests.get(new_actual_url, headers=headers, timeout=10, verify=False)
                         res.encoding = res.apparent_encoding
                         soup = BeautifulSoup(res.text, 'html.parser')
+                        actual_url = new_actual_url
                         break
+                    except: pass
+            
+            # 2. 如果還是很簡單，尋找 iframe
+            if len(soup.get_text().strip()) < 2000:
+                iframe = soup.find('iframe', src=True)
+                if iframe:
+                    new_actual_url = urljoin(actual_url, iframe['src'])
+                    try:
+                        res = requests.get(new_actual_url, headers=headers, timeout=10, verify=False)
+                        res.encoding = res.apparent_encoding
+                        soup = BeautifulSoup(res.text, 'html.parser')
+                        actual_url = new_actual_url
                     except: pass
         
         # 基準：首頁得分
@@ -167,7 +172,6 @@ def process_school(school_name, base_url):
         seen_urls = {actual_url}
         base_netloc = urlparse(actual_url).netloc
         
-        # 加入預測出的 CMS 連結
         for cms_url in guess_cms_urls(actual_url, soup):
             if cms_url not in seen_urls:
                 candidate_pool.append((100, cms_url))
@@ -188,25 +192,16 @@ def process_school(school_name, base_url):
                     if base_netloc.replace('www.', '') in candidate_netloc:
                         seen_urls.add(full_url)
                         priority = 0
-                        # 核心邏輯：極度優先處理「彙整」、「全部」、「更多」
-                        if any(kw in combined_text for kw in ["更多", "全部", "彙整", "MORE", "ALL"]):
-                            priority = 100 
-                        elif any(kw in combined_text for kw in ["公告", "NEWS"]):
-                            priority = 50
-                        elif '/p/428' in full_url.lower():
-                            priority = 40
-                        elif 'site_news/main' in full_url.lower():
-                            priority = 30
-                        elif '/p/4' in full_url.lower():
-                            priority = 10
-                        
-                        if priority > 0:
-                            candidate_pool.append((priority, full_url))
+                        if any(kw in combined_text for kw in ["更多", "全部", "MORE", "ALL", "彙整"]): priority = 20
+                        elif any(kw in combined_text for kw in ["公告", "NEWS"]): priority = 15
+                        elif 'site_news/main' in full_url.lower(): priority = 10
+                        elif '/p/4' in full_url.lower(): priority = 5
+                        if priority > 0: candidate_pool.append((priority, full_url))
                     
         candidate_pool.sort(key=lambda x: x[0], reverse=True)
         candidates = [url for p, url in candidate_pool]
                     
-        # 增加測試數量到 50 個，確保不會漏掉隱藏較深的「更多」連結
+        # 測試候選者
         for candidate_url in candidates[:50]:
             if stop_flag: break
             try:
@@ -220,9 +215,7 @@ def process_school(school_name, base_url):
             except: continue 
                 
         return school_name, base_url, best_candidate
-
-    except Exception as e:
-        return school_name, base_url, None
+    except Exception: return school_name, base_url, None
 
 def main():
     parser = argparse.ArgumentParser(description="從學校清單 CSV 檔爬取學校公告網址。")
