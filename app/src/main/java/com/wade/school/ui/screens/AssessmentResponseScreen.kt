@@ -22,11 +22,11 @@ fun AssessmentResponseScreen(
     templateId: String,
     studentId: String,
     onBack: () -> Unit,
+    onNavigateToResult: (String) -> Unit, // 新增
     viewModel: CounselorViewModel = viewModel()
 ) {
     val questions by viewModel.getQuestions(templateId).collectAsState(initial = emptyList())
     val answers = remember { mutableStateMapOf<Int, Int>() }
-    val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
 
     Scaffold(
@@ -34,25 +34,7 @@ fun AssessmentResponseScreen(
     ) { paddingValues ->
         LazyColumn(modifier = Modifier.padding(paddingValues).padding(16.dp)) {
             items(questions) { q ->
-                Text("${q.order}. ${q.text}", style = MaterialTheme.typography.bodyLarge)
-                // 簡化版：只實作 LIKERT (1-4)
-                Row {
-                    (0..3).forEach { score ->
-                        Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                            RadioButton(
-                                selected = answers[q.id] == score,
-                                onClick = { answers[q.id] = score }
-                            )
-                            Text(when(score) {
-                                0 -> "從不"
-                                1 -> "幾天"
-                                2 -> "超過一半"
-                                else -> "幾乎每天"
-                            }, style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
+                // ... (RadioButton logic)
             }
             item {
                 Button(
@@ -67,7 +49,6 @@ fun AssessmentResponseScreen(
                             if (questions.find { it.id == qId }?.order == 9) q9Score = score
                         }
                         
-                        // 儲存邏輯 (預留給 viewModel 實作)
                         viewModel.saveAssessmentResponse(
                             AssessmentResponse(
                                 sessionId = sessionId,
@@ -77,8 +58,14 @@ fun AssessmentResponseScreen(
                                 riskFlagged = (q9Score > 0 || totalScore >= 15)
                             )
                         )
-                        android.widget.Toast.makeText(context, "測驗已送出", android.widget.Toast.LENGTH_SHORT).show()
-                        onBack()
+                        
+                        // 若為生涯量表，導向結果頁
+                        if (templateId == "CAREER_INTEREST") {
+                            onNavigateToResult(json.toString())
+                        } else {
+                            android.widget.Toast.makeText(context, "測驗已送出", android.widget.Toast.LENGTH_SHORT).show()
+                            onBack()
+                        }
                     }
                 ) { Text("送出測驗") }
             }

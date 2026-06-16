@@ -1,5 +1,6 @@
 package com.wade.school
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -229,6 +230,16 @@ fun TeacherAppNavigation() {
                 sessionId = sessionId,
                 templateId = templateId,
                 studentId = studentId,
+                onBack = { navController.popBackStack() },
+                onNavigateToResult = { answersJson -> 
+                    navController.navigate("counseling/result/${Uri.encode(answersJson)}") 
+                }
+            )
+        }
+        composable("counseling/result/{answersJson}") { backStackEntry ->
+            val answersJson = backStackEntry.arguments?.getString("answersJson") ?: ""
+            CareerInterestResultScreen(
+                answersJson = answersJson,
                 onBack = { navController.popBackStack() }
             )
         }

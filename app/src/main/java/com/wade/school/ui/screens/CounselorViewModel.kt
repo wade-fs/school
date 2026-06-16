@@ -40,7 +40,9 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                 val templates = listOf(
                     AssessmentTemplate("MOOD_WEEKLY", "學生心情溫度計 (週測)", TemplateCategory.MOOD, "每週監測學生情緒狀況，自動偵測高風險警示。", true),
                     AssessmentTemplate("PHQ9_TW", "憂鬱症篩檢 (PHQ-9)", TemplateCategory.MENTAL_HEALTH, "過去兩週憂鬱症狀篩檢，高風險即時警示。", true),
-                    AssessmentTemplate("CAREER_INTEREST", "生涯興趣量表 (Holland)", TemplateCategory.CAREER, "探索職業興趣，協助志願選填。", true)
+                    AssessmentTemplate("CAREER_INTEREST", "生涯興趣量表 (Holland)", TemplateCategory.CAREER, "探索職業興趣，協助志願選填。", true),
+                    AssessmentTemplate("GENDER_EQUALITY", "性別平等調查", TemplateCategory.GENDER_EQUALITY, "校園性平意識與友善環境感受調查。", true),
+                    AssessmentTemplate("INTERPERSONAL", "人際與霸凌調查", TemplateCategory.INTERPERSONAL, "班級人際關係與校園安全感調查。", true)
                 )
                 templates.forEach { dao.insertAssessmentTemplate(it) }
                 
@@ -56,6 +58,20 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                     AssessmentQuestion(templateId = "PHQ9_TW", order = 9, text = "有不如死掉或傷害自己的念頭", type = QuestionType.LIKERT, riskTrigger = true, riskThreshold = 1)
                 )
                 assessmentDao.insertQuestions(phq9)
+
+                val genderEquality = listOf(
+                    AssessmentQuestion(templateId = "GENDER_EQUALITY", order = 1, text = "男生理科比女生強是天生的", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "GENDER_EQUALITY", order = 2, text = "家事應該由男女雙方平等分擔", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "GENDER_EQUALITY", order = 7, text = "女生說「不要」有時候其實是「要」", type = QuestionType.LIKERT, riskTrigger = true, riskThreshold = 4)
+                )
+                assessmentDao.insertQuestions(genderEquality)
+
+                val interpersonal = listOf(
+                    AssessmentQuestion(templateId = "INTERPERSONAL", order = 1, text = "我曾在學校被同學持續嘲笑、羞辱或取綽號", type = QuestionType.YES_NO, riskTrigger = true),
+                    AssessmentQuestion(templateId = "INTERPERSONAL", order = 2, text = "我曾在學校被同學故意推打、踢踹或拿走我的東西", type = QuestionType.YES_NO, riskTrigger = true),
+                    AssessmentQuestion(templateId = "INTERPERSONAL", order = 3, text = "整體的班級人際關係讓我感到滿意", type = QuestionType.LIKERT)
+                )
+                assessmentDao.insertQuestions(interpersonal)
             }
         }
     }
