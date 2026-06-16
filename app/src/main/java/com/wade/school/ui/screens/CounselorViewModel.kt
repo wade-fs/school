@@ -72,6 +72,44 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
                     AssessmentQuestion(templateId = "INTERPERSONAL", order = 3, text = "整體的班級人際關係讓我感到滿意", type = QuestionType.LIKERT)
                 )
                 assessmentDao.insertQuestions(interpersonal)
+
+                val gad7 = listOf(
+                    AssessmentQuestion(templateId = "GAD7_TW", order = 1, text = "感覺緊張、焦慮或者急躁", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "GAD7_TW", order = 2, text = "沒有辦法停止或控制擔憂", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "GAD7_TW", order = 3, text = "對各種事情過分擔憂", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "GAD7_TW", order = 4, text = "難以放鬆", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "GAD7_TW", order = 5, text = "坐立難安，很難靜下來", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "GAD7_TW", order = 6, text = "容易心煩或易怒", type = QuestionType.LIKERT),
+                    AssessmentQuestion(templateId = "GAD7_TW", order = 7, text = "感覺有什麼可怕的事情要發生", type = QuestionType.LIKERT)
+                )
+                assessmentDao.insertQuestions(gad7)
+
+                val schoolStress = (1..12).map { i ->
+                    val questionText = when(i) {
+                        1 -> "我擔心考試成績不夠好"
+                        2 -> "我感覺功課的量超過我能負荷的範圍"
+                        3 -> "我害怕讓父母或老師失望"
+                        4 -> "我因為課業壓力而影響睡眠"
+                        5 -> "我會為了讀書放棄休閒或社交活動"
+                        6 -> "我覺得自己的成績決定了我的未來"
+                        7 -> "我擔心升學選擇的問題"
+                        8 -> "當考試表現不佳，我會有很長一段時間情緒低落"
+                        9 -> "我覺得學校的進度對我來說太快"
+                        10 -> "我在意排名，總是和同學比較"
+                        11 -> "我曾為了成績而有作弊的念頭"
+                        12 -> "整體來說，課業壓力讓我感到喘不過氣"
+                        else -> ""
+                    }
+                    AssessmentQuestion(
+                        templateId = "STRESS_SCHOOL", 
+                        order = i, 
+                        text = questionText, 
+                        type = QuestionType.LIKERT,
+                        riskTrigger = i == 12, // 最後一題直接觸發
+                        riskThreshold = 4
+                    )
+                }
+                assessmentDao.insertQuestions(schoolStress)
             }
         }
     }
