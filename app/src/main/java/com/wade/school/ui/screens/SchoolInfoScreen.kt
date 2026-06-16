@@ -9,9 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -123,7 +121,7 @@ fun SchoolInfoScreen(
                         val announceUrl = state.selectedSchool?.announcementUrl
                         if (!announceUrl.isNullOrBlank()) {
                             SchoolInfoRow(
-                                icon = { Icon(Icons.Default.OpenInNew, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) },
+                                icon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) },
                                 label = "開啟公告網頁",
                                 onClick = {
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(announceUrl))
@@ -175,7 +173,7 @@ fun SchoolInfoScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.Announcement, null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.AutoMirrored.Filled.Announcement, null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(8.dp))
                     Text(
                         "學校公告",

@@ -6,9 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -143,12 +141,12 @@ private fun getIconForName(name: String): ImageVector {
         "swap_horiz" -> Icons.Default.SwapHoriz
         "drafts" -> Icons.Default.Drafts
         "history" -> Icons.Default.History
-        "label" -> Icons.Default.Label
+        "label" -> Icons.AutoMirrored.Filled.Label
         "groups" -> Icons.Default.Groups
         "event_busy" -> Icons.Default.EventBusy
         "gavel" -> Icons.Default.Gavel
         "event" -> Icons.Default.Event
-        "assignment" -> Icons.Default.Assignment
+        "assignment" -> Icons.AutoMirrored.Filled.Assignment
         "summarize" -> Icons.Default.Summarize
         "meeting_room" -> Icons.Default.MeetingRoom
         "build" -> Icons.Default.Build
