@@ -256,6 +256,20 @@ fun StudentDetailScreen(
                         Icon(Icons.Default.Share, contentDescription = "分享紀錄")
                     }
                     IconButton(onClick = {
+                        if (isRecording) {
+                            speechRecognizer.stopListening()
+                            isRecording = false
+                        } else {
+                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    }) {
+                        Icon(
+                            imageVector = if (isRecording) Icons.Default.MicOff else Icons.Default.Mic,
+                            contentDescription = "語音輸入",
+                            tint = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    IconButton(onClick = {
                         if (sessionText.isNotBlank()) {
                             viewModel.saveCaseLog(studentId, sessionText)
                             sessionText = ""
@@ -272,26 +286,8 @@ fun StudentDetailScreen(
                     actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    if (isRecording) {
-                        speechRecognizer.stopListening()
-                        isRecording = false
-                    } else {
-                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                    }
-                },
-                containerColor = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-            ) {
-                Icon(
-                    imageVector = if (isRecording) Icons.Default.Clear else Icons.Default.Mic,
-                    contentDescription = "語音輸入",
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
-            }
         }
+        // FloatingActionButton removed
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
