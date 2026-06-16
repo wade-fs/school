@@ -60,6 +60,13 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun insertReferral(referral: ReferralRecord) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertReferral(referral)
+        }
+    }
+
+
     fun startAssessmentSession(session: AssessmentSession) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.insertAssessmentSession(session)

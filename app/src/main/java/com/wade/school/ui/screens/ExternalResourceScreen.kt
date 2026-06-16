@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
@@ -20,6 +21,71 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wade.school.data.local.entity.ExternalResource
+import com.wade.school.data.local.entity.ReferralRecord
+import com.wade.school.data.local.entity.StudentWithProfile
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReferralDialog(
+    resourceName: String,
+    resourceId: Int,
+    students: List<StudentWithProfile>,
+    onDismiss: () -> Unit,
+    onSave: (String, String) -> Unit
+) {
+    var selectedStudentId by remember { mutableStateOf<String?>(null) }
+    var reason by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("轉介個案至 $resourceName") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // 學生選擇器
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = selectedStudentId?.let { id -> students.find { it.student.studentId == id }?.student?.name } ?: "選擇學生",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("目標學生") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        students.forEach { s ->
+                            DropdownMenuItem(
+                                text = { Text("${s.student.name} (${s.student.studentId})") },
+                                onClick = { 
+                                    selectedStudentId = s.student.studentId
+                                    expanded = false 
+                                }
+                            )
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = reason,
+                    onValueChange = { reason = it },
+                    label = { Text("轉介原因") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                selectedStudentId?.let { id ->
+                    onSave(id, reason)
+                }
+            }, enabled = selectedStudentId != null) { Text("確認轉介") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+    )
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,7 +94,29 @@ fun ExternalResourceScreen(
     viewModel: CounselorViewModel = viewModel()
 ) {
     val resources by viewModel.externalResources.collectAsState(initial = emptyList())
+    val students by viewModel.studentsWithProfiles.collectAsState()
     val context = LocalContext.current
+    var showReferralDialog by remember { mutableStateOf<ExternalResource?>(null) }
+
+    if (showReferralDialog != null) {
+        ReferralDialog(
+            resourceName = showReferralDialog!!.name,
+            resourceId = showReferralDialog!!.id,
+            students = students,
+            onDismiss = { showReferralDialog = null },
+            onSave = { studentId, reason ->
+                viewModel.insertReferral(ReferralRecord(
+                    studentId = studentId,
+                    resourceId = showReferralDialog!!.id,
+                    resourceName = showReferralDialog!!.name,
+                    referredBy = "counselor_01",
+                    reason = reason
+                ))
+                android.widget.Toast.makeText(context, "已新增轉介紀錄", android.widget.Toast.LENGTH_SHORT).show()
+                showReferralDialog = null
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -63,10 +151,14 @@ fun ExternalResourceScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
                 items(emergencyResources) { resource ->
-                    ResourceCard(resource) {
-                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${resource.phone}"))
-                        context.startActivity(intent)
-                    }
+                    ResourceCard(
+                        resource = resource,
+                        onDial = {
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${resource.phone}"))
+                            context.startActivity(intent)
+                        },
+                        onRefer = { showReferralDialog = resource }
+                    )
                 }
             }
 
@@ -77,10 +169,14 @@ fun ExternalResourceScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
                 items(otherResources) { resource ->
-                    ResourceCard(resource) {
-                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${resource.phone}"))
-                        context.startActivity(intent)
-                    }
+                    ResourceCard(
+                        resource = resource,
+                        onDial = {
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${resource.phone}"))
+                            context.startActivity(intent)
+                        },
+                        onRefer = { showReferralDialog = resource }
+                    )
                 }
             }
             
@@ -102,7 +198,7 @@ fun ExternalResourceScreen(
 }
 
 @Composable
-fun ResourceCard(resource: ExternalResource, onDial: () -> Unit) {
+fun ResourceCard(resource: ExternalResource, onDial: () -> Unit, onRefer: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -121,13 +217,19 @@ fun ResourceCard(resource: ExternalResource, onDial: () -> Unit) {
                 }
             },
             trailingContent = {
-                FilledIconButton(
-                    onClick = onDial,
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = if (resource.isEmergency) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Icon(Icons.Default.Call, contentDescription = "撥打")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    FilledIconButton(
+                        onClick = onDial,
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = if (resource.isEmergency) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(Icons.Default.Call, contentDescription = "撥打")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    IconButton(onClick = onRefer) {
+                        Icon(Icons.Default.Add, contentDescription = "轉介")
+                    }
                 }
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
