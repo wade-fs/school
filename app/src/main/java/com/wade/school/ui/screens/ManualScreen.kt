@@ -60,7 +60,7 @@ fun ManualScreen(onBack: () -> Unit) {
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // 將 AndroidView 放入一個水平滾動的 Box 中
+            // 使用 Box 僅對表格內容區域啟用水平滾動
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

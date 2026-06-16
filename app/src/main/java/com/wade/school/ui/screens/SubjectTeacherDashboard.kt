@@ -189,6 +189,16 @@ fun SubjectTeacherDashboard(
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
+                } else if (activeDisplayClassId == null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("尚未選擇班級或資料為空", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            Text("請先從上方切換班級，或點擊右上角匯入學生/課表資料。", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                 }
 
                 Text("教學捷徑", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)

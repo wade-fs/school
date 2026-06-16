@@ -390,8 +390,14 @@ fun CounselingDashboard(
                     CircularProgressIndicator(modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
                 }
-                IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
-                    Icon(Icons.Default.FileUpload, contentDescription = "匯入學籍 CSV")
+                // 確保匯入按鈕始終可見
+                FilledTonalButton(
+                    onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                ) {
+                    Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("匯入學籍")
                 }
                 TextButton(onClick = { showAllStudents = !showAllStudents }) {
                     Text(if (showAllStudents) "顯示個案" else "顯示全部")
@@ -399,22 +405,30 @@ fun CounselingDashboard(
             }
         }
         
-        item {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                placeholder = { Text("搜尋姓名、學號或狀態...") },
-                leadingIcon = { Icon(Icons.Default.Search, null) },
-                singleLine = true
-            )
-        }
+        if (filteredEntries.isEmpty()) {
+            item {
+                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    Text("目前無學生資料，請點擊上方按鈕匯入 CSV 學籍檔。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        } else {
+            item {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    placeholder = { Text("搜尋姓名、學號或狀態...") },
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    singleLine = true
+                )
+            }
 
-        items(filteredEntries) { entry ->
-            StudentCounselingCard(
-                entry = entry,
-                onClick = { onNavigateToStudent(entry.student.studentId, entry.student.name) }
-            )
+            items(filteredEntries) { entry ->
+                StudentCounselingCard(
+                    entry = entry,
+                    onClick = { onNavigateToStudent(entry.student.studentId, entry.student.name) }
+                )
+            }
         }
     }
 }

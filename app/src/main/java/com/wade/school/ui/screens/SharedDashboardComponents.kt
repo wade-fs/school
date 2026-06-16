@@ -128,7 +128,10 @@ fun DashboardActionCard(title: String, description: String, actionText: String, 
                 Text(text = title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Text(text = description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            TextButton(onClick = onClick) {
+            TextButton(onClick = {
+                android.util.Log.d("DashboardActionCard", "Clicked: $title")
+                onClick()
+            }) {
                 Text(actionText)
             }
         }
