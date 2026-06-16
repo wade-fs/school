@@ -188,7 +188,10 @@ fun TeacherAppNavigation() {
             ManualScreen(onBack = { navController.popBackStack() })
         }
         composable("counseling/alerts") {
-            RiskAlertScreen(onBack = { navController.popBackStack() })
+            RiskAlertDashboardScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToStudent = { studentId -> navController.navigate("student_detail/$studentId/Unknown") }
+            )
         }
         composable("counseling/templates") {
             AssessmentManagementScreen(
