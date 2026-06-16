@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.wade.school.data.local.AppDatabase
+import com.wade.school.data.local.dao.AssessmentDao
 import com.wade.school.data.local.entity.*
 import com.wade.school.util.CaseLogCrypto
 import com.wade.school.util.CsvParser
@@ -64,6 +65,24 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
             dao.insertAssessmentSession(session)
         }
     }
+
+    fun saveAssessmentResponse(response: AssessmentResponse) {
+        viewModelScope.launch(Dispatchers.IO) {
+            assessmentDao.insertResponse(response)
+            if (response.riskFlagged) {
+                dao.insertAlert(
+                    RiskAlert(
+                        studentId = response.studentId,
+                        sourceType = "ASSESSMENT",
+                        sourceId = response.sessionId,
+                        severity = AlertSeverity.URGENT,
+                        reason = "測驗高風險警示 (總分: ${response.totalScore ?: 0})"
+                    )
+                )
+            }
+        }
+    }
+
 
     val studentsWithProfiles: StateFlow<List<StudentWithProfile>> = dao.getAllStudentsWithProfiles()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
