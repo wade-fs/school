@@ -381,26 +381,34 @@ fun CounselingDashboard(
         }
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = if (showAllStudents) "所有學生" else "重點個案",
-                    style = MaterialTheme.typography.titleMedium,
+                // 將顯示切換組合放在左邊
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
-                )
+                ) {
+                    Text(
+                        text = if (showAllStudents) "全部學生" else "重點個案",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    TextButton(onClick = { showAllStudents = !showAllStudents }) {
+                        Text(if (showAllStudents) "(切換重點)" else "(切換全部)")
+                    }
+                }
+                
                 if (isImporting) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
                 }
-                // 確保匯入按鈕始終可見
+                
+                // 匯入按鈕靠右
                 FilledTonalButton(
                     onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                    modifier = Modifier.padding(start = 8.dp)
                 ) {
                     Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("匯入學籍")
-                }
-                TextButton(onClick = { showAllStudents = !showAllStudents }) {
-                    Text(if (showAllStudents) "顯示個案" else "顯示全部")
+                    Text("匯入學生")
                 }
             }
         }
@@ -408,7 +416,7 @@ fun CounselingDashboard(
         if (filteredEntries.isEmpty()) {
             item {
                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                    Text("目前無學生資料，請點擊上方按鈕匯入 CSV 學籍檔。", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if (showAllStudents) "目前無學生資料，請點擊上方按鈕匯入 CSV 學籍檔。" else "目前無重點個案。", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else {

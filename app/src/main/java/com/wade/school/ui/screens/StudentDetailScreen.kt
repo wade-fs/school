@@ -23,11 +23,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wade.school.data.local.entity.CaseLog
-import com.wade.school.data.local.entity.StudentWithProfile
 import com.wade.school.util.AudioRecorder
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import android.media.MediaPlayer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,7 +41,9 @@ fun StudentDetailScreen(
     val context = LocalContext.current
     val audioRecorder = remember { AudioRecorder(context) }
     var currentRecordFile by remember { mutableStateOf<File?>(null) }
+    var recordings by remember { mutableStateOf(audioRecorder.listRecordings(studentId)) }
     var isRecording by remember { mutableStateOf(false) }
+    var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
     
     val studentWithProfile by viewModel.studentsWithProfiles.collectAsState()
     val currentEntry = studentWithProfile.find { it.student.studentId == studentId }
@@ -54,6 +56,8 @@ fun StudentDetailScreen(
 
     var showScheduleDialog by remember { mutableStateOf(false) }
     var scheduleType by remember { mutableStateOf("初談") }
+    var showRenameDialog by remember { mutableStateOf<File?>(null) }
+    var renameInput by remember { mutableStateOf("") }
 
     LaunchedEffect(currentEntry) {
         if (currentEntry != null) {
@@ -215,12 +219,39 @@ fun StudentDetailScreen(
             }
         )
     }
+    
+    // Add rename dialog
+    if (showRenameDialog != null) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = null },
+            title = { Text("重新命名錄音檔") },
+            text = {
+                OutlinedTextField(
+                    value = renameInput,
+                    onValueChange = { renameInput = it },
+                    label = { Text("新檔名") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRenameDialog?.let { file ->
+                        val newFile = audioRecorder.renameRecording(file, renameInput)
+                        recordings = audioRecorder.listRecordings(studentId)
+                    }
+                    showRenameDialog = null
+                    renameInput = ""
+                }) { Text("確定") }
+            },
+            dismissButton = { TextButton(onClick = { showRenameDialog = null }) { Text("取消") } }
+        )
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            currentRecordFile = audioRecorder.startRecording(studentId)
+            currentRecordFile = audioRecorder.startRecording(studentId, studentName)
             isRecording = true
         } else {
             Toast.makeText(context, "錄音需要權限", Toast.LENGTH_SHORT).show()
@@ -254,6 +285,7 @@ fun StudentDetailScreen(
                         if (isRecording) {
                             audioRecorder.stopRecording()
                             isRecording = false
+                            recordings = audioRecorder.listRecordings(studentId) // 刷新列表
                             Toast.makeText(context, "錄音已儲存", Toast.LENGTH_SHORT).show()
                         } else {
                             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
@@ -351,7 +383,7 @@ fun StudentDetailScreen(
                     value = sessionText,
                     onValueChange = { sessionText = it },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
-                    placeholder = { Text("錄音內容或手動輸入...") }
+                    placeholder = { Text("請輸入晤談紀錄...") }
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -368,6 +400,45 @@ fun StudentDetailScreen(
             } else {
                 items(logs) { log ->
                     LogItem(log, viewModel)
+                }
+            }
+            
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                Text("錄音檔管理", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            
+            items(recordings) { file ->
+                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(file.name, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { 
+                            showRenameDialog = file
+                            renameInput = file.nameWithoutExtension
+                        }) { Icon(Icons.Default.Edit, "重新命名") }
+                        IconButton(onClick = {
+                            mediaPlayer?.release()
+                            mediaPlayer = MediaPlayer().apply {
+                                setDataSource(file.absolutePath)
+                                prepare()
+                                start()
+                            }
+                        }) { Icon(Icons.Default.PlayArrow, "播放") }
+                        IconButton(onClick = {
+                            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "audio/*"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "分享錄音"))
+                        }) { Icon(Icons.Default.Share, "分享") }
+                        IconButton(onClick = {
+                            audioRecorder.deleteRecording(file)
+                            recordings = audioRecorder.listRecordings(studentId)
+                        }) { Icon(Icons.Default.Delete, "刪除") }
+                    }
                 }
             }
         }
