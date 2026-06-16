@@ -28,7 +28,7 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 # 關鍵字
-TEXT_KEYWORDS = ["最新消息", "校務公告", "學校公告", "公告訊息", "公告事項", "行政公告", "NEWS", "公告", "更多", "MORE", "+", "ALL", "彙整", "全部"]
+TEXT_KEYWORDS = ["最新消息", "校務公告", "學校公告", "公告訊息", "公告事項", "行政公告", "NEWS", "公告", "更多", "MORE", "+", "ALL", "彙整", "全部", "更多公告"]
 URL_KEYWORDS = ['site_news', '/p/4', 'news', 'bulletin', 'announcement', 'board', 'main2.php']
 
 def is_valid_url(url):
@@ -50,17 +50,20 @@ def check_is_announcement_page(html, url):
     if total_links > 10 and (img_link_count / total_links) > 0.5:
         return -1 
 
+    # 排除通訊錄
     text_nospace = text.replace(" ", "")
-    if "分機表" in text_nospace or "教職員名冊" in text_nospace or "聯絡方式" in text_nospace:
-        if "校長室" in text_nospace or "教務處" in text_nospace or "分機" in text_nospace:
+    if "分機" in text_nospace:
+        if "校長室" in text_nospace or "教務處" in text_nospace or "總務處" in text_nospace:
             rowspan_count = len(soup.find_all(['td', 'th'], attrs={'rowspan': True}))
             if rowspan_count >= 5: return -1 
             
+    # 檢查表格內容是否明顯是通訊錄
     tables = soup.find_all('table')
     for table in tables:
         table_text = table.get_text(separator='', strip=True)
         if ("分機" in table_text or "電話" in table_text) and ("職稱" in table_text or "姓名" in table_text):
-            return -1
+            if "處室" in table_text or "教務處" in table_text:
+                return -1
         merged_cells = [cell for cell in (table.find_all(['td', 'th'], attrs={'colspan': True}) + table.find_all(['td', 'th'], attrs={'rowspan': True})) if int(cell.get('colspan', 1)) > 1 or int(cell.get('rowspan', 1)) > 1]
         rowspan_count = sum(1 for cell in table.find_all(['td', 'th'], attrs={'rowspan': True}) if int(cell.get('rowspan', 1)) > 1)
         if len(merged_cells) >= 10 or rowspan_count >= 3: return -1
@@ -127,6 +130,7 @@ def process_school(school_name, base_url):
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
 
     try:
+        # 第一階段：請求並處理跳轉
         res = requests.get(base_url, headers=headers, timeout=10, verify=False)
         actual_url = res.url 
         res.encoding = res.apparent_encoding 
@@ -142,7 +146,20 @@ def process_school(school_name, base_url):
                     res.encoding = res.apparent_encoding
                     soup = BeautifulSoup(res.text, 'html.parser')
                 except: pass
+
+        # 新增機制：如果首頁內容過於簡單，嘗試尋找「進入首頁」連結
+        if len(soup.get_text().strip()) < 500:
+            for a in soup.find_all('a', href=True):
+                if any(kw in a.get_text(strip=True).upper() for kw in ["進入首頁", "進入網站", "HOME", "APP/HOME", "進入"]):
+                    actual_url = urljoin(actual_url, a['href'])
+                    try:
+                        res = requests.get(actual_url, headers=headers, timeout=10, verify=False)
+                        res.encoding = res.apparent_encoding
+                        soup = BeautifulSoup(res.text, 'html.parser')
+                        break
+                    except: pass
         
+        # 基準：首頁得分
         best_score = check_is_announcement_page(res.text, actual_url)
         best_candidate = actual_url if best_score >= 15 else None
         
@@ -150,6 +167,7 @@ def process_school(school_name, base_url):
         seen_urls = {actual_url}
         base_netloc = urlparse(actual_url).netloc
         
+        # 加入預測出的 CMS 連結
         for cms_url in guess_cms_urls(actual_url, soup):
             if cms_url not in seen_urls:
                 candidate_pool.append((100, cms_url))
@@ -170,28 +188,41 @@ def process_school(school_name, base_url):
                     if base_netloc.replace('www.', '') in candidate_netloc:
                         seen_urls.add(full_url)
                         priority = 0
-                        if any(kw in combined_text for kw in ["更多", "全部", "MORE", "ALL", "彙整"]): priority = 20
-                        elif any(kw in combined_text for kw in ["公告", "NEWS"]): priority = 15
-                        elif 'site_news/main' in full_url.lower(): priority = 10
-                        elif '/p/4' in full_url.lower(): priority = 5
-                        if priority > 0: candidate_pool.append((priority, full_url))
+                        # 核心邏輯：極度優先處理「彙整」、「全部」、「更多」
+                        if any(kw in combined_text for kw in ["更多", "全部", "彙整", "MORE", "ALL"]):
+                            priority = 100 
+                        elif any(kw in combined_text for kw in ["公告", "NEWS"]):
+                            priority = 50
+                        elif '/p/428' in full_url.lower():
+                            priority = 40
+                        elif 'site_news/main' in full_url.lower():
+                            priority = 30
+                        elif '/p/4' in full_url.lower():
+                            priority = 10
+                        
+                        if priority > 0:
+                            candidate_pool.append((priority, full_url))
                     
         candidate_pool.sort(key=lambda x: x[0], reverse=True)
         candidates = [url for p, url in candidate_pool]
                     
-        for candidate_url in candidates[:30]:
+        # 增加測試數量到 50 個，確保不會漏掉隱藏較深的「更多」連結
+        for candidate_url in candidates[:50]:
             if stop_flag: break
             try:
                 c_res = requests.get(candidate_url, headers=headers, timeout=10, verify=False)
                 c_res.encoding = c_res.apparent_encoding
                 c_score = check_is_announcement_page(c_res.text, candidate_url)
-                if c_score > best_score and c_score >= 15:
+                
+                if c_score > best_score:
                     best_score = c_score
                     best_candidate = candidate_url
             except: continue 
                 
         return school_name, base_url, best_candidate
-    except Exception: return school_name, base_url, None
+
+    except Exception as e:
+        return school_name, base_url, None
 
 def main():
     parser = argparse.ArgumentParser(description="從學校清單 CSV 檔爬取學校公告網址。")
@@ -229,11 +260,25 @@ def main():
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
         futures = {executor.submit(process_school, n, u): i for i, n, u in schools_to_process}
-        for future in concurrent.futures.as_completed(futures):
-            row_idx = futures[future]
-            name, base, news_url = future.result()
-            if news_url: all_rows[row_idx][note_idx] = news_url
-            if stop_flag: break
+        
+        count = 0
+        try:
+            for future in concurrent.futures.as_completed(futures):
+                if stop_flag:
+                    for f in futures: f.cancel()
+                    break
+                
+                row_idx = futures[future]
+                name, base, news_url = future.result()
+                
+                if news_url:
+                    all_rows[row_idx][note_idx] = news_url
+                    
+                count += 1
+                if count % 5 == 0 or count == len(schools_to_process):
+                    print(f"進度: {count}/{len(schools_to_process)} - 剛處理完: {name} -> {news_url or '未找到'}")
+        except KeyboardInterrupt:
+            pass
                         
     with open(args.output, 'w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
