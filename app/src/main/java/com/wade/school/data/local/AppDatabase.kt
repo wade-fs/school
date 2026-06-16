@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.wade.school.data.local.dao.CounselorDao
+import com.wade.school.data.local.dao.AssessmentDao
 import com.wade.school.data.local.entity.*
 
 @Database(
@@ -40,14 +41,14 @@ import com.wade.school.data.local.entity.*
         ClassActivity::class,
         ClassHonor::class,
         MoeSchool::class,
-        OfficialDocument::class,          // Phase 1: 公文管理
+        OfficialDocument::class,
         RiskAlert::class,
         AssessmentTemplate::class,
         AssessmentQuestion::class,
         AssessmentSession::class,
         AssessmentResponse::class
     ],
-    version = 14,                        // bumped from 13
+    version = 15, // bumped
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -71,7 +72,6 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // alias used by SchoolInfoViewModel
         fun getInstance(context: Context): AppDatabase = getDatabase(context)
     }
 }
