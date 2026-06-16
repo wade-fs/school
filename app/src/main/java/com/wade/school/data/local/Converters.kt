@@ -1,9 +1,7 @@
 package com.wade.school.data.local
 
 import androidx.room.TypeConverter
-import com.wade.school.data.local.entity.AlertSeverity
-import com.wade.school.data.local.entity.DocCategory
-import com.wade.school.data.local.entity.DocStatus
+import com.wade.school.data.local.entity.*
 
 class Converters {
     @TypeConverter
@@ -16,19 +14,31 @@ class Converters {
 
     @TypeConverter
     fun fromDocStatus(value: DocStatus): String = value.name
-
     @TypeConverter
     fun toDocStatus(value: String): DocStatus = DocStatus.valueOf(value)
 
     @TypeConverter
     fun fromDocCategory(value: DocCategory): String = value.name
-
     @TypeConverter
     fun toDocCategory(value: String): DocCategory = DocCategory.valueOf(value)
 
     @TypeConverter
     fun fromAlertSeverity(value: AlertSeverity): String = value.name
-
     @TypeConverter
     fun toAlertSeverity(value: String): AlertSeverity = AlertSeverity.valueOf(value)
+
+    @TypeConverter
+    fun fromTemplateCategory(value: TemplateCategory): String = value.name
+    @TypeConverter
+    fun toTemplateCategory(value: String): TemplateCategory = TemplateCategory.valueOf(value)
+
+    @TypeConverter
+    fun fromQuestionType(value: QuestionType): String = value.name
+    @TypeConverter
+    fun toQuestionType(value: String): QuestionType = QuestionType.valueOf(value)
+
+    @TypeConverter
+    fun fromSessionStatus(value: SessionStatus): String = value.name
+    @TypeConverter
+    fun toSessionStatus(value: String): SessionStatus = SessionStatus.valueOf(value)
 }

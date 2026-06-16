@@ -347,4 +347,13 @@ interface CounselorDao {
 
     @Query("DELETE FROM official_documents WHERE docId = :docId")
     suspend fun deleteDocument(docId: String)
+    // ── Assessment Templates ──────────────────────────────────────────────────
+    @Query("SELECT * FROM assessment_templates")
+    fun getAllAssessmentTemplates(): Flow<List<AssessmentTemplate>>
+
+    @Query("SELECT COUNT(*) FROM assessment_templates")
+    suspend fun getAssessmentTemplateCount(): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAssessmentTemplate(template: AssessmentTemplate)
 }

@@ -41,9 +41,13 @@ import com.wade.school.data.local.entity.*
         ClassHonor::class,
         MoeSchool::class,
         OfficialDocument::class,          // Phase 1: 公文管理
-        RiskAlert::class
+        RiskAlert::class,
+        AssessmentTemplate::class,
+        AssessmentQuestion::class,
+        AssessmentSession::class,
+        AssessmentResponse::class
     ],
-    version = 13,                        // bumped from 12
+    version = 14,                        // bumped from 13
     exportSchema = false
 )
 @TypeConverters(Converters::class)

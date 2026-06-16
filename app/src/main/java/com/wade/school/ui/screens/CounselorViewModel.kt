@@ -425,7 +425,22 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         }.map { it.studentId }
     }
 
-    // ── 導師功能 (Homeroom) ──────────────────────────────────────────────────
+    // ── 評量系統 ──────────────────────────────────────────────────────────────
+    val assessmentTemplates: StateFlow<List<AssessmentTemplate>> = dao.getAllAssessmentTemplates()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun initBuiltInTemplates() {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (dao.getAssessmentTemplateCount() == 0) {
+                val templates = listOf(
+                    AssessmentTemplate("MOOD_WEEKLY", "學生心情溫度計 (週測)", TemplateCategory.MOOD, "每週監測學生情緒狀況，自動偵測高風險警示。", true),
+                    AssessmentTemplate("PHQ9_TW", "憂鬱症篩檢 (PHQ-9)", TemplateCategory.MENTAL_HEALTH, "過去兩週憂鬱症狀篩檢，高風險即時警示。", true),
+                    AssessmentTemplate("CAREER_INTEREST", "生涯興趣量表 (Holland)", TemplateCategory.CAREER, "探索職業興趣，協助志願選填。", true)
+                )
+                templates.forEach { dao.insertAssessmentTemplate(it) }
+            }
+        }
+    }
     fun submitAttendance(records: List<AttendanceRecord>, date: Long = System.currentTimeMillis()) {
         viewModelScope.launch(Dispatchers.IO) {
             val calendar = java.util.Calendar.getInstance()

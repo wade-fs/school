@@ -187,6 +187,12 @@ fun TeacherAppNavigation() {
         composable("manual") {
             ManualScreen(onBack = { navController.popBackStack() })
         }
+        composable("counseling/templates") {
+            AssessmentManagementScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToSession = { templateId -> /* TODO: Navigate to session screen */ }
+            )
+        }
         composable("admin/docs/pending") {
             OfficialDocumentScreen(onBack = { navController.popBackStack() })
         }
