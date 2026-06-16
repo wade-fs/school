@@ -28,6 +28,11 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     val unreadAlerts: StateFlow<List<RiskAlert>> = dao.getUnreadAlerts()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val allSessions: StateFlow<List<AssessmentSession>> = assessmentDao.getAllSessions()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun getCompletedCount(sessionId: String) = assessmentDao.getCompletedCount(sessionId)
+
     fun markAlertAsRead(alertId: Int) {
         viewModelScope.launch(Dispatchers.IO) { dao.markAsRead(alertId) }
     }

@@ -194,6 +194,9 @@ fun TeacherAppNavigation() {
                 onNavigateToStudent = { studentId -> navController.navigate("student_detail/$studentId/Unknown") }
             )
         }
+        composable("counseling/sessions/active") {
+            AssessmentSessionListScreen(onBack = { navController.popBackStack() })
+        }
         composable("counseling/templates") {
             AssessmentManagementScreen(
                 onBack = { navController.popBackStack() },
