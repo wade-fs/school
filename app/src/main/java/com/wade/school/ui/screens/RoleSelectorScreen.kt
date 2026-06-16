@@ -78,45 +78,45 @@ fun RoleSelectorScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // ... (其餘 UI 程式碼保持不變)
-        Spacer(modifier = Modifier.height(48.dp))
-        Text(
-            text = if (schoolConfig.ownerName != null) "您好，${schoolConfig.ownerName} 老師" else "歡迎使用",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            text = "中學教師助手",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 24.sp
+            Spacer(modifier = Modifier.height(48.dp))
+            Text(
+                text = if (schoolConfig.ownerName != null) "您好，${schoolConfig.ownerName} 老師" else "歡迎使用",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
             )
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "請選擇角色以進入工作台",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            items(roles) { role ->
-                RoleCard(role = role, onClick = {
-                    if (role.id == "school_info") {
-                        // 學校資訊不需要身份驗證，直接進入
-                        onRoleSelected(role.id)
-                    } else if (isConfigured) {
-                        showPinGate = role.id
-                    } else {
-                        onRoleSelected(role.id)
-                    }
-                })
+            Text(
+                text = "中學教師助手",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp
+                )
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "請選擇角色以進入工作台",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(roles) { role ->
+                    RoleCard(role = role, onClick = {
+                        if (role.id == "school_info") {
+                            // 學校資訊不需要身份驗證，直接進入
+                            onRoleSelected(role.id)
+                        } else if (isConfigured) {
+                            showPinGate = role.id
+                        } else {
+                            onRoleSelected(role.id)
+                        }
+                    })
+                }
             }
         }
     }

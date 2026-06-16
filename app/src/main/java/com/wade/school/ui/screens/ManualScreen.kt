@@ -42,23 +42,23 @@ fun ManualScreen(onBack: () -> Unit) {
                 }
             )
         }
-    ) { paddingValues ->
+    ) {
         // 簡單的 Markdown 顯示方式 (處理標題與分段)
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(it)
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
             manualContent.split("\n").forEach { line ->
                 when {
-                    line.startsWith("# ") -> Text(line.removePrefix("# "), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(vertical = 8.dp))
-                    line.startsWith("## ") -> Text(line.removePrefix("## "), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 4.dp))
-                    line.startsWith("* ") -> Text("• ${line.removePrefix("* ")}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 16.dp, vertical = 2.dp))
+                    line.startsWith("# ") -> Text(line.removePrefix("# "), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 8.dp, bottom = 8.dp))
+                    line.startsWith("## ") -> Text(line.removePrefix("## "), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 4.dp, bottom = 4.dp))
+                    line.startsWith("* ") -> Text("• ${line.removePrefix("* ")}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 16.dp, top = 2.dp, bottom = 2.dp))
                     line.startsWith("|") -> {} // 簡單過濾表格，後續可擴充
                     line.isBlank() -> Spacer(modifier = Modifier.height(8.dp))
-                    else -> Text(line, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 2.dp))
+                    else -> Text(line, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 2.dp, bottom = 2.dp))
                 }
             }
         }
