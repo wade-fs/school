@@ -128,7 +128,7 @@ fun MoodCheckScreen(
                     Button(
                         onClick = {
                             moodData.forEach { (studentId, data) ->
-                                viewModel.recordMoodResponse(activeSessionId!!, studentId, data.first, data.second)
+                                viewModel.saveMoodCheckResponse(activeSessionId!!.toLong(), studentId, data.first, data.second)
                             }
                             viewModel.finishMoodCheckSession()
                             onBack()

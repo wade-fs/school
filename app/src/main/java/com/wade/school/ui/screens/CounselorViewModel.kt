@@ -385,9 +385,22 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun recordMoodResponse(sessionId: Int, studentId: String, score: Int, note: String?) {
+    fun saveMoodCheckResponse(sessionId: Long, studentId: String, score: Int, note: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            dao.insertMoodCheckResponse(MoodCheckResponse(sessionId = sessionId, studentId = studentId, score = score, note = note))
+            dao.insertMoodCheckResponse(MoodCheckResponse(sessionId = sessionId.toInt(), studentId = studentId, score = score, note = note))
+
+            // 高風險檢測：分數 <= 3 觸發 URGENT 警示
+            if (score <= 3) {
+                dao.insertAlert(
+                    RiskAlert(
+                        studentId = studentId,
+                        sourceType = "ASSESSMENT",
+                        sourceId = sessionId.toString(),
+                        severity = AlertSeverity.URGENT,
+                        reason = "心情溫度計低分警示 (分數: $score)"
+                    )
+                )
+            }
         }
     }
 
@@ -397,15 +410,15 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
 
     val lastSession: Flow<MoodCheckSession?> = dao.getLastSession()
 
-    fun getResponsesForSession(sessionId: Int) = dao.getResponsesForSession(sessionId)
+    fun getResponsesForSession(sessionId: Long) = dao.getResponsesForSession(sessionId)
 
     fun getClassMoodAlerts(classId: String): Flow<List<String>> = dao.getLatestSessions(classId, 2).map { sessions ->
         if (sessions.isEmpty()) return@map emptyList<String>()
         val latestSession = sessions[0]
         val previousSession = if (sessions.size > 1) sessions[1] else null
-        val latestResponses = dao.getResponsesForSession(latestSession.id).first()
+        val latestResponses = dao.getResponsesForSession(latestSession.id.toLong()).first()
         val prevResponsesMap = if (previousSession != null)
-            dao.getResponsesForSession(previousSession.id).first().associateBy { it.studentId }
+            dao.getResponsesForSession(previousSession.id.toLong()).first().associateBy { it.studentId }
         else emptyMap()
         latestResponses.filter { resp ->
             resp.score <= 3 || (prevResponsesMap[resp.studentId]?.score?.let { it - resp.score >= 2 } == true)

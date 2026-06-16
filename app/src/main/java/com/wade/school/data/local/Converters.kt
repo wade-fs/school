@@ -1,6 +1,7 @@
 package com.wade.school.data.local
 
 import androidx.room.TypeConverter
+import com.wade.school.data.local.entity.AlertSeverity
 import com.wade.school.data.local.entity.DocCategory
 import com.wade.school.data.local.entity.DocStatus
 
@@ -24,4 +25,10 @@ class Converters {
 
     @TypeConverter
     fun toDocCategory(value: String): DocCategory = DocCategory.valueOf(value)
+
+    @TypeConverter
+    fun fromAlertSeverity(value: AlertSeverity): String = value.name
+
+    @TypeConverter
+    fun toAlertSeverity(value: String): AlertSeverity = AlertSeverity.valueOf(value)
 }

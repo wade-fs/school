@@ -88,7 +88,7 @@ interface CounselorDao {
     suspend fun insertMoodCheckResponse(response: MoodCheckResponse)
 
     @Query("SELECT * FROM mood_check_responses WHERE sessionId = :sessionId")
-    fun getResponsesForSession(sessionId: Int): Flow<List<MoodCheckResponse>>
+    fun getResponsesForSession(sessionId: Long): Flow<List<MoodCheckResponse>>
 
     @Query("SELECT * FROM mood_check_sessions WHERE classId = :classId ORDER BY conductedAt DESC LIMIT :limit")
     fun getLatestSessions(classId: String, limit: Int): Flow<List<MoodCheckSession>>
@@ -328,6 +328,22 @@ interface CounselorDao {
 
     @Query("SELECT COUNT(*) FROM official_documents WHERE status = 'PENDING_SIGN' AND isUrgent = 1")
     fun getUrgentPendingCount(): Flow<Int>
+
+    // ── Risk Alerts ──────────────────────────────────────────────────────────
+    @Query("SELECT * FROM risk_alerts WHERE isRead = 0 ORDER BY triggeredAt DESC")
+    fun getUnreadAlerts(): Flow<List<RiskAlert>>
+
+    @Query("SELECT * FROM risk_alerts WHERE studentId = :studentId ORDER BY triggeredAt DESC")
+    fun getAlertsByStudent(studentId: String): Flow<List<RiskAlert>>
+
+    @Query("UPDATE risk_alerts SET isRead = 1 WHERE id = :alertId")
+    suspend fun markAsRead(alertId: Int)
+
+    @Query("UPDATE risk_alerts SET handledAt = :time, handledBy = :by, handledNote = :note WHERE id = :alertId")
+    suspend fun markAsHandled(alertId: Int, time: Long, by: String, note: String)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAlert(alert: RiskAlert)
 
     @Query("DELETE FROM official_documents WHERE docId = :docId")
     suspend fun deleteDocument(docId: String)

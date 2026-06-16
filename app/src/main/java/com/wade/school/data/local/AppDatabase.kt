@@ -40,9 +40,10 @@ import com.wade.school.data.local.entity.*
         ClassActivity::class,
         ClassHonor::class,
         MoeSchool::class,
-        OfficialDocument::class          // Phase 1: 公文管理
+        OfficialDocument::class,          // Phase 1: 公文管理
+        RiskAlert::class
     ],
-    version = 12,                        // bumped from 11
+    version = 13,                        // bumped from 12
     exportSchema = false
 )
 @TypeConverters(Converters::class)
