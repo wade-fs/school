@@ -167,20 +167,37 @@ class SchoolInfoViewModel(app: Application) : AndroidViewModel(app) {
                     doc.select("table tr").forEach { row ->
                         val cells = row.select("td")
                         if (cells.size >= 2) {
-                            val dateCell = cells.last()
-                            val dateText = dateCell?.text()?.trim() ?: ""
-                            if (dateText.matches(Regex(""".*\d{4}[-/]\d{2}[-/]\d{2}.*|.*\d{3}[-/]\d{2}[-/]\d{2}.*"""))) {
+                            val possibleDates = cells.map { it.text().trim() }.filter {
+                                it.matches(Regex(""".*\d{4}[-/]\d{2}[-/]\d{2}.*|.*\d{3}[-/]\d{2}[-/]\d{2}.*"""))
+                            }
+                            
+                            if (possibleDates.isNotEmpty()) {
+                                val dateText = possibleDates.first()
                                 val link = row.selectFirst("a")
-                                val title = link?.text()?.trim() ?: cells[0].text().trim()
+                                val title = link?.text()?.trim() ?: cells.firstOrNull { it.text().trim() != dateText }?.text()?.trim() ?: "公告"
                                 val href = link?.attr("href") ?: ""
                                 val fullUrl = urljoin(url, href)
-                                val tag = if (cells.size >= 3) cells[0].text().trim() else "公告"
-                                announcements.add(SchoolAnnouncement(tag, title, dateText, fullUrl))
+                                announcements.add(SchoolAnnouncement("公告", title, dateText, fullUrl))
                             }
                         }
                     }
 
-                    // 方式 2: 如果 Table 沒抓到，試試 li
+                    // 方式 2: Div 結構 (板橋高中等常見)
+                    if (announcements.isEmpty()) {
+                        doc.select("div[class*=news], div[class*=item], div[class*=list]").forEach { div ->
+                            val text = div.text().trim()
+                            val dateMatch = Regex("""\d{4}[-/]\d{2}[-/]\d{2}|\d{3}[-/]\d{2}[-/]\d{2}""").find(text)
+                            if (dateMatch != null) {
+                                val link = div.selectFirst("a")
+                                val title = link?.text()?.trim() ?: text.replace(dateMatch.value, "").trim()
+                                val href = link?.attr("href") ?: ""
+                                val fullUrl = urljoin(url, href)
+                                announcements.add(SchoolAnnouncement("公告", title, dateMatch.value, fullUrl))
+                            }
+                        }
+                    }
+
+                    // 方式 3: 如果 Table/Div 沒抓到，試試 li
                     if (announcements.isEmpty()) {
                         doc.select("li").forEach { li ->
                             val link = li.selectFirst("a")

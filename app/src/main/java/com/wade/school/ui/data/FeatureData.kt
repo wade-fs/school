@@ -61,7 +61,8 @@ object FeatureData {
     // ── 學校資訊 ─────────────────────────────────────────────────────────────
     private val schoolInfoFeatures = listOf(
         FeatureGroup("校務資訊", listOf(
-            FeatureItem("文件掃描", "拍照上傳紙本公文", "camera_alt", null, BadgeType.NONE, "school_info/scan")
+            FeatureItem("文件掃描", "拍照上傳紙本公文", "camera_alt", null, BadgeType.NONE, "school_info/scan"),
+            FeatureItem("使用手冊", "查看 App 操作說明", "help", null, BadgeType.NONE, "manual")
         ))
     )
 }

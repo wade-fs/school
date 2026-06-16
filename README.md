@@ -37,3 +37,7 @@
 2. 確保環境已安裝 **JDK 17**。
 3. 點擊 **Run** 即可部署至模擬器或實體手機。
 4. **CI/CD 設定**: 在 GitHub 設定 `SIGNING_KEY_BASE64`、`KEY_ALIAS` 等 Secrets 後，推送 Tag 即可自動打包 Release APK。
+
+## 📖 使用手冊
+本 App 設有完整的離線操作說明，請點選 App 內的 **「使用手冊」** 或查閱專案目錄下的 [docs/USER_MANUAL.md](docs/USER_MANUAL.md)。
+
