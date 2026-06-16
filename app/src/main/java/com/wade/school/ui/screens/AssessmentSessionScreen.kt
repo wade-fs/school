@@ -20,6 +20,7 @@ import java.util.UUID
 fun AssessmentSessionScreen(
     templateId: String,
     onBack: () -> Unit,
+    onNavigateToStudentPicker: (String, String, String) -> Unit, // sessionId, templateId, classId
     viewModel: CounselorViewModel = viewModel()
 ) {
     val classes by viewModel.classes.collectAsState()
@@ -59,22 +60,22 @@ fun AssessmentSessionScreen(
             Button(
                 onClick = {
                     selectedClass?.let { className ->
+                        val sessionId = UUID.randomUUID().toString()
                         val session = AssessmentSession(
-                            sessionId = UUID.randomUUID().toString(),
+                            sessionId = sessionId,
                             templateId = templateId,
                             targetClass = className,
                             conductedBy = "counselor_01",
                             scheduledAt = System.currentTimeMillis()
                         )
                         viewModel.startAssessmentSession(session)
-                        android.widget.Toast.makeText(context, "已發起施測: $className", android.widget.Toast.LENGTH_SHORT).show()
-                        onBack()
+                        onNavigateToStudentPicker(sessionId, templateId, className)
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = selectedClass != null
             ) {
-                Text("確認發起施測")
+                Text("選擇學生並開始")
             }
         }
     }

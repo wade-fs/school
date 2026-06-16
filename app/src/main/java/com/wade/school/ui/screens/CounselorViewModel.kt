@@ -67,6 +67,8 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
 
+    fun getStudentsByClass(classId: String) = dao.getStudentsByClass(classId)
+
     fun startAssessmentSession(session: AssessmentSession) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.insertAssessmentSession(session)

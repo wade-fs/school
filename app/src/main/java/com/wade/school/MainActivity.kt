@@ -203,6 +203,32 @@ fun TeacherAppNavigation() {
             val templateId = backStackEntry.arguments?.getString("templateId") ?: ""
             AssessmentSessionScreen(
                 templateId = templateId,
+                onBack = { navController.popBackStack() },
+                onNavigateToStudentPicker = { sessionId, tid, cid -> 
+                    navController.navigate("counseling/session/$sessionId/$tid/$cid") 
+                }
+            )
+        }
+        composable("counseling/session/{sessionId}/{templateId}/{classId}") { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getString("sessionId") ?: ""
+            val templateId = backStackEntry.arguments?.getString("templateId") ?: ""
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            AssessmentStudentPickerScreen(
+                sessionId = sessionId,
+                templateId = templateId,
+                classId = classId,
+                onBack = { navController.popBackStack() },
+                onNavigateToResponse = { sid, tid, stid -> navController.navigate("counseling/response/$sid/$tid/$stid") }
+            )
+        }
+        composable("counseling/response/{sessionId}/{templateId}/{studentId}") { backStackEntry ->
+            val sessionId = backStackEntry.arguments?.getString("sessionId") ?: ""
+            val templateId = backStackEntry.arguments?.getString("templateId") ?: ""
+            val studentId = backStackEntry.arguments?.getString("studentId") ?: ""
+            AssessmentResponseScreen(
+                sessionId = sessionId,
+                templateId = templateId,
+                studentId = studentId,
                 onBack = { navController.popBackStack() }
             )
         }
