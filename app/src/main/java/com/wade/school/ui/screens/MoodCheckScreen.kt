@@ -340,7 +340,7 @@ fun BsrsQuestionnaire(
                     }
                 }
             }
-            if (index < 5) Divider(modifier = Modifier.padding(vertical = 4.dp))
+            if (index < 5) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
         }
         
         val totalScore = scores.sum()
