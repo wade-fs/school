@@ -173,6 +173,7 @@ fun TeacherAppNavigation() {
             val classId = backStackEntry.arguments?.getString("classId") ?: ""
             HomeroomManagementScreen(
                 classId = classId,
+                onNavigate = { route -> navController.navigate(route) },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -317,6 +318,42 @@ fun TeacherAppNavigation() {
         }
         composable("subject/lesson_plans") {
             LessonPlanScreen(onBack = { navController.popBackStack() })
+        }
+
+        // ── 導師平台 (Homeroom Platform) ───────────────────────────
+        composable("homeroom/leave?classId={classId}", arguments = listOf(
+            navArgument("classId") { nullable = true }
+        )) { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            LeaveRequestScreen(classId = classId, onBack = { navController.popBackStack() })
+        }
+        composable("homeroom/discipline?classId={classId}", arguments = listOf(
+            navArgument("classId") { nullable = true }
+        )) { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            DisciplineScreen(classId = classId, onBack = { navController.popBackStack() })
+        }
+        composable("homeroom/students?classId={classId}", arguments = listOf(
+            navArgument("classId") { nullable = true }
+        )) { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            HomeroomStudentListScreen(
+                classId = classId,
+                onNavigateToDetail = { id -> navController.navigate("student_detail/$id") },
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("homeroom/fund?classId={classId}", arguments = listOf(
+            navArgument("classId") { nullable = true }
+        )) { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            ClassFundScreen(classId = classId, onBack = { navController.popBackStack() })
+        }
+        composable("homeroom/conference?classId={classId}", arguments = listOf(
+            navArgument("classId") { nullable = true }
+        )) { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            ParentConferenceScreen(classId = classId, onBack = { navController.popBackStack() })
         }
     }
 }

@@ -53,4 +53,19 @@ class Converters {
 
     @TypeConverter fun fromAttendanceStatus(v: AttendanceStatus): String = v.name
     @TypeConverter fun toAttendanceStatus(v: String): AttendanceStatus = AttendanceStatus.valueOf(v)
+
+    @TypeConverter fun fromDisciplineType(v: DisciplineType): String = v.name
+    @TypeConverter fun toDisciplineType(v: String): DisciplineType = DisciplineType.valueOf(v)
+
+    @TypeConverter fun fromLeaveType(v: LeaveType): String = v.name
+    @TypeConverter fun toLeaveType(v: String): LeaveType = LeaveType.valueOf(v)
+
+    @TypeConverter fun fromLeaveStatus(v: LeaveStatus): String = v.name
+    @TypeConverter fun toLeaveStatus(v: String): LeaveStatus = LeaveStatus.valueOf(v)
+
+    @TypeConverter fun fromAlertRuleType(v: AlertRuleType): String = v.name
+    @TypeConverter fun toAlertRuleType(v: String): AlertRuleType = AlertRuleType.valueOf(v)
+
+    @TypeConverter fun fromFundTransactionType(v: FundTransactionType): String = v.name
+    @TypeConverter fun toFundTransactionType(v: String): FundTransactionType = FundTransactionType.valueOf(v)
 }

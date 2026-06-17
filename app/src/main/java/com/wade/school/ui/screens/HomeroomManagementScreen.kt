@@ -29,32 +29,20 @@ import com.wade.school.data.local.entity.*
 import java.text.SimpleDateFormat
 import java.util.*
 
-sealed class HomeroomFeature(val title: String, val icon: ImageVector, val id: String, val color: Color) {
-    data object Checklist : HomeroomFeature("每日叮嚀", Icons.AutoMirrored.Filled.FactCheck, "checklist", Color(0xFF4CAF50))
-    data object Contact : HomeroomFeature("家長聯絡", Icons.Default.ContactPhone, "contact", Color(0xFF2196F3))
-    data object Observation : HomeroomFeature("行為觀察", Icons.Default.Visibility, "observation", Color(0xFFFF9800))
-    data object Cadre : HomeroomFeature("幹部名單", Icons.Default.Badge, "cadre", Color(0xFF9C27B0))
-    data object Activity : HomeroomFeature("班級活動", Icons.Default.Event, "activity", Color(0xFFE91E63))
-    data object Honor : HomeroomFeature("優良事蹟", Icons.Default.EmojiEvents, "honor", Color(0xFFFFC107))
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeroomManagementScreen(
     classId: String,
     onBack: () -> Unit,
+    onNavigate: (String) -> Unit = {},
     viewModel: CounselorViewModel = viewModel()
 ) {
-    var activeFeature by remember { mutableStateOf<HomeroomFeature?>(null) }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (activeFeature == null) "$classId 班級管理助手" else activeFeature!!.title) },
+                title = { Text("$classId 班級管理助手") },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        if (activeFeature == null) onBack() else activeFeature = null
-                    }) {
+                    IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 }
@@ -62,17 +50,28 @@ fun HomeroomManagementScreen(
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-            if (activeFeature == null) {
-                FeatureGrid(onFeatureSelect = { activeFeature = it })
-            } else {
-                when (activeFeature) {
-                    HomeroomFeature.Checklist -> ChecklistTab(classId, viewModel)
-                    HomeroomFeature.Contact -> ContactLogTab(classId, viewModel)
-                    HomeroomFeature.Observation -> ObservationTab(classId, viewModel)
-                    HomeroomFeature.Cadre -> CadreTab(classId, viewModel)
-                    HomeroomFeature.Activity -> ActivityTab(classId, viewModel)
-                    HomeroomFeature.Honor -> HonorTab(classId, viewModel)
-                    null -> {}
+            val groups = com.wade.school.ui.data.FeatureData.getFeaturesForRole("homeroom")
+            LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                groups.forEach { group ->
+                    item {
+                        Text(text = group.groupTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    items(group.items.chunked(2)) { pair ->
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            pair.forEach { feature ->
+                                FeatureCard(feature, modifier = Modifier.weight(1f)) { route ->
+                                    val finalRoute = if (route.contains("?")) {
+                                        "$route&classId=$classId"
+                                    } else {
+                                        "$route?classId=$classId"
+                                    }
+                                    onNavigate(finalRoute)
+                                }
+                            }
+                            if (pair.size == 1) Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
                 }
             }
         }
@@ -80,51 +79,53 @@ fun HomeroomManagementScreen(
 }
 
 @Composable
-fun FeatureGrid(onFeatureSelect: (HomeroomFeature) -> Unit) {
-    val features = listOf(
-        HomeroomFeature.Checklist, HomeroomFeature.Contact,
-        HomeroomFeature.Observation, HomeroomFeature.Cadre,
-        HomeroomFeature.Activity, HomeroomFeature.Honor
-    )
-
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        contentPadding = PaddingValues(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        items(features) { feature ->
-            FeatureCard(feature, onClick = { onFeatureSelect(feature) })
-        }
-    }
-}
-
-@Composable
-fun FeatureCard(feature: HomeroomFeature, onClick: () -> Unit) {
+fun FeatureCard(feature: com.wade.school.ui.data.FeatureItem, modifier: Modifier = Modifier, onClick: (String) -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(140.dp)
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = modifier
+            .height(120.dp)
+            .clickable { onClick(feature.route) },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Icon(
-                imageVector = feature.icon,
+                imageVector = when(feature.iconName) {
+                    "dashboard" -> Icons.Default.Dashboard
+                    "contact_page" -> Icons.Default.ContactPage
+                    "grid_view" -> Icons.Default.GridView
+                    "how_to_reg" -> Icons.Default.HowToReg
+                    "pending_actions" -> Icons.Default.PendingActions
+                    "warning" -> Icons.Default.Warning
+                    "bar_chart" -> Icons.Default.BarChart
+                    "gavel" -> Icons.Default.Gavel
+                    "rate_review" -> Icons.Default.RateReview
+                    "edit_note" -> Icons.Default.EditNote
+                    "book" -> Icons.Default.Book
+                    "contact_phone" -> Icons.Default.ContactPhone
+                    "groups" -> Icons.Default.Groups
+                    "campaign" -> Icons.Default.Campaign
+                    "badge" -> Icons.Default.Badge
+                    "account_balance" -> Icons.Default.AccountBalance
+                    "event" -> Icons.Default.Event
+                    "emoji_events" -> Icons.Default.EmojiEvents
+                    else -> Icons.Default.Star
+                },
                 contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = feature.color
+                modifier = Modifier.size(32.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(text = feature.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = feature.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            if (feature.badge != null) {
+                Badge { Text(feature.badge) }
+            }
         }
     }
 }
+
 
 @Composable
 fun ChecklistTab(classId: String, viewModel: CounselorViewModel) {

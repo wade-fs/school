@@ -55,9 +55,16 @@ import com.wade.school.data.local.entity.*
         ClassroomInteraction::class,
         TeachingReflection::class,
         CompetencyMapping::class,
-        SubjectAttendance::class
+        SubjectAttendance::class,
+        DisciplineRecord::class,
+        LeaveRequest::class,
+        AttendanceAlert::class,
+        StudentHealthInfo::class,
+        SemesterRecord::class,
+        ClassFundTransaction::class,
+        ParentTeacherConference::class
         ],
-        version = 16,                        // bumped from 15
+        version = 17,                        // bumped from 16
         exportSchema = false
         )
 @TypeConverters(Converters::class)

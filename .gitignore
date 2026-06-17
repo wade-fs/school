@@ -56,3 +56,4 @@ Thumbs.db
 # but if you prefer a lean repo, you can ignore it.
 # gradle/wrapper/gradle-wrapper.jar
 *.txt
+.*swp

@@ -748,6 +748,64 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
         return dao.getContactBookForDate(classId, calendar.timeInMillis)
     }
 
+    // --- Phase 1: Leave, Discipline, Health ---
+
+    fun getPendingLeaves(classId: String) = dao.getPendingLeaves(classId)
+    
+    fun getPendingLeaveCount(classId: String) = dao.getPendingLeaveCount(classId)
+
+    fun saveLeaveRequest(request: LeaveRequest) {
+        viewModelScope.launch(Dispatchers.IO) { dao.upsertLeaveRequest(request) }
+    }
+
+    fun reviewLeave(id: Int, status: LeaveStatus, note: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.reviewLeave(id, status, System.currentTimeMillis(), note)
+        }
+    }
+
+    fun getDisciplineByClass(classId: String) = dao.getDisciplineByClass(classId)
+    
+    fun getDisciplineByStudent(studentId: String) = dao.getDisciplineByStudent(studentId)
+
+    fun saveDisciplineRecord(record: DisciplineRecord) {
+        viewModelScope.launch(Dispatchers.IO) { dao.insertDisciplineRecord(record) }
+    }
+
+    fun getDisciplineScore(studentId: String, year: Int, sem: Int) = 
+        dao.getDisciplineScore(studentId, year, sem)
+
+    fun saveStudentHealth(health: StudentHealthInfo) {
+        viewModelScope.launch(Dispatchers.IO) { dao.upsertStudentHealth(health) }
+    }
+
+    suspend fun getStudentHealth(studentId: String) = dao.getStudentHealth(studentId)
+
+    // --- Phase 2: Fund, Alerts, Conferences ---
+
+    fun getFundRecords(classId: String) = dao.getFundByClass(classId)
+    
+    fun getFundBalance(classId: String) = dao.getFundBalance(classId)
+
+    fun saveFundTransaction(transaction: ClassFundTransaction) {
+        viewModelScope.launch(Dispatchers.IO) { dao.insertFundTransaction(transaction) }
+    }
+
+    fun getConferencesByClass(classId: String) = dao.getConferencesByClass(classId)
+
+    fun saveConference(conference: ParentTeacherConference) {
+        viewModelScope.launch(Dispatchers.IO) { dao.insertParentTeacherConference(conference) }
+    }
+
+    // --- Phase 3: Semester Records & Comments ---
+
+    fun getSemesterRecords(classId: String, year: Int, sem: Int) = 
+        dao.getSemesterRecordsByClass(classId, year, sem)
+
+    fun saveSemesterRecord(record: SemesterRecord) {
+        viewModelScope.launch(Dispatchers.IO) { dao.upsertSemesterRecord(record) }
+    }
+
     companion object {
         fun defaultPeriodTimes(): List<PeriodTime> = listOf(
             PeriodTime(period = 0, startTime = "07:30", endTime = "08:10"),

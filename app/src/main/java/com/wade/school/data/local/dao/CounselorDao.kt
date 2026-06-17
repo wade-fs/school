@@ -443,4 +443,83 @@ interface CounselorDao {
     @Query("""SELECT * FROM subject_attendance
         WHERE classId = :classId AND date = :date AND period = :period""")
     fun getSubjectAttendance(classId: String, date: Long, period: Int): Flow<List<SubjectAttendance>>
+
+    // ── 獎懲記錄 ──────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDisciplineRecord(r: DisciplineRecord): Long
+
+    @Query("SELECT * FROM discipline_records WHERE classId = :classId ORDER BY recordDate DESC")
+    fun getDisciplineByClass(classId: String): Flow<List<DisciplineRecord>>
+
+    @Query("SELECT * FROM discipline_records WHERE studentId = :studentId ORDER BY recordDate DESC")
+    fun getDisciplineByStudent(studentId: String): Flow<List<DisciplineRecord>>
+
+    @Query("""SELECT SUM(
+        CASE type
+            WHEN 'MAJOR_MERIT'   THEN 9
+            WHEN 'MINOR_MERIT'   THEN 3
+            WHEN 'COMMENDATION'  THEN 1
+            WHEN 'WARNING'       THEN -1
+            WHEN 'MINOR_DEMERIT' THEN -3
+            WHEN 'MAJOR_DEMERIT' THEN -9
+            WHEN 'ADMONITION'    THEN -1
+            ELSE 0
+        END) FROM discipline_records
+        WHERE studentId = :studentId AND academicYear = :year AND semester = :sem""")
+    fun getDisciplineScore(studentId: String, year: Int, sem: Int): Flow<Int?>
+
+    // ── 請假相關 ──────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertLeaveRequest(r: LeaveRequest)
+
+    @Query("SELECT * FROM leave_requests WHERE classId = :classId AND status = 'PENDING' ORDER BY createdAt DESC")
+    fun getPendingLeaves(classId: String): Flow<List<LeaveRequest>>
+
+    @Query("SELECT COUNT(*) FROM leave_requests WHERE classId = :classId AND status = 'PENDING'")
+    fun getPendingLeaveCount(classId: String): Flow<Int>
+
+    @Query("UPDATE leave_requests SET status = :status, reviewedAt = :time, reviewNote = :note WHERE id = :id")
+    suspend fun reviewLeave(id: Int, status: LeaveStatus, time: Long, note: String)
+
+    // ── 健康資訊 ──────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertStudentHealth(h: StudentHealthInfo)
+
+    @Query("SELECT * FROM student_health_info WHERE studentId = :studentId")
+    suspend fun getStudentHealth(studentId: String): StudentHealthInfo?
+
+    @Query("SELECT * FROM student_health_info WHERE iepStudent = 1")
+    fun getIepStudents(): Flow<List<StudentHealthInfo>>
+
+    // ── 操行與評語 ────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSemesterRecord(r: SemesterRecord)
+
+    @Query("""SELECT * FROM semester_records
+        WHERE classId = :classId AND academicYear = :year AND semester = :sem
+        ORDER BY studentName""")
+    fun getSemesterRecordsByClass(classId: String, year: Int, sem: Int): Flow<List<SemesterRecord>>
+
+    @Query("SELECT COUNT(*) FROM semester_records WHERE classId = :classId AND isFinalized = 0")
+    fun getUnfinalizedCount(classId: String): Flow<Int>
+
+    // ── 班費 ──────────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFundTransaction(t: ClassFundTransaction): Long
+
+    @Query("SELECT * FROM class_fund_transactions WHERE classId = :classId ORDER BY transactionDate DESC")
+    fun getFundByClass(classId: String): Flow<List<ClassFundTransaction>>
+
+    @Query("SELECT SUM(CASE WHEN type = 'INCOME' THEN amount ELSE -amount END) FROM class_fund_transactions WHERE classId = :classId")
+    fun getFundBalance(classId: String): Flow<Int?>
+
+    // ── 親師座談 ──────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertParentTeacherConference(c: ParentTeacherConference): Long
+
+    @Query("SELECT * FROM parent_teacher_conferences WHERE classId = :classId ORDER BY conferenceDate DESC")
+    fun getConferencesByClass(classId: String): Flow<List<ParentTeacherConference>>
+
+    @Query("SELECT * FROM parent_teacher_conferences WHERE studentId = :studentId ORDER BY conferenceDate DESC")
+    fun getConferencesByStudent(studentId: String): Flow<List<ParentTeacherConference>>
 }

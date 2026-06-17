@@ -149,6 +149,7 @@ fun DashboardScreen(
                             onNavigateToScan = { onNavigate("school_info/scan") },
                             onNavigateToManual = { onNavigate("manual") },
                             onEditClass = { showSettingsDialog = true },
+                            onNavigate = onNavigate,
                             viewModel = viewModel
                         )
                         else -> RoleFeatureContent(role = role, onNavigate = onNavigate)
@@ -508,6 +509,7 @@ fun HomeroomDashboard(
     onNavigateToScan: () -> Unit,
     onNavigateToManual: () -> Unit,
     onEditClass: () -> Unit,
+    onNavigate: (String) -> Unit = {},
     viewModel: CounselorViewModel
 ) {
     val schoolConfig by viewModel.schoolConfig.collectAsState()
@@ -579,7 +581,7 @@ fun HomeroomDashboard(
                 ) { Text("心情檢核") }
                 
                 Button(
-                    onClick = { onNavigateToBulletins(classId) },
+                    onClick = { onNavigate("homeroom/dashboard?classId=$classId") },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) { Text("班級管理助手") }
