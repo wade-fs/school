@@ -46,8 +46,31 @@ object FeatureData {
 
     // ── 科任教師 ─────────────────────────────────────────────────────────────
     private val subjectFeatures = listOf(
-        FeatureGroup("教學管理", listOf(
-            FeatureItem("教案模板", "108課綱核心素養", "topic", null, BadgeType.NONE, "subject/template")
+        FeatureGroup("今日課務", listOf(
+            FeatureItem("我的課表",   "今日課程與下節提醒",       "calendar_today",  "下節 14:10", BadgeType.INFO,    "subject/timetable"),
+            FeatureItem("課堂互動",   "隨機抽人、加分、計時器",   "casino",          null,         BadgeType.NONE,    "subject/interaction"),
+            FeatureItem("科任點名",   "本節出缺席快速記錄",        "how_to_reg",      null,         BadgeType.NONE,    "subject/attendance")
+        )),
+        FeatureGroup("成績管理", listOf(
+            FeatureItem("輸入考試成績", "段考/小考成績批次輸入",   "edit",            "待輸入 2 班", BadgeType.WARNING, "subject/grades/input"),
+            FeatureItem("成績加權計算", "學期總成績自動計算",      "calculate",       null,          BadgeType.NONE,    "subject/grades/calc"),
+            FeatureItem("成績分析",     "分布圖、PR 值、低標追蹤", "analytics",       null,          BadgeType.NONE,    "subject/grades/analysis"),
+            FeatureItem("補考管理",     "缺考學生補考排程",         "assignment_late", "3",           BadgeType.URGENT,  "subject/makeup")
+        )),
+        FeatureGroup("作業與評量", listOf(
+            FeatureItem("作業管理",   "發布作業與批改追蹤",        "assignment",      "未批改 47 份", BadgeType.WARNING, "subject/assignments"),
+            FeatureItem("評量出題",   "建立題庫與小考",            "quiz",            null,           BadgeType.NONE,    "subject/quizzes"),
+            FeatureItem("未繳追蹤",   "逾期未繳學生一覽",          "assignment_late", "12",           BadgeType.URGENT,  "subject/assignments/overdue")
+        )),
+        FeatureGroup("教學準備", listOf(
+            FeatureItem("108 課綱教案", "素養導向教案庫",          "topic",           null,           BadgeType.NONE,    "subject/lesson_plans"),
+            FeatureItem("教學省思",    "課後省思四格日誌",          "rate_review",     null,           BadgeType.NONE,    "subject/reflection"),
+            FeatureItem("教材資源",    "上傳與管理教學素材",        "attach_file",     null,           BadgeType.NONE,    "subject/materials")
+        )),
+        FeatureGroup("學生學習", listOf(
+            FeatureItem("學生表現",   "課堂積分與學習態度紀錄",    "star",            null,           BadgeType.NONE,    "subject/performance"),
+            FeatureItem("成績通知",   "傳送成績給學生/家長",        "send",            null,           BadgeType.NONE,    "subject/notify"),
+            FeatureItem("低標名單",   "本學期成績低標學生清單",     "warning",         "5",            BadgeType.WARNING, "subject/at_risk")
         ))
     )
 

@@ -41,4 +41,16 @@ class Converters {
     fun fromSessionStatus(value: SessionStatus): String = value.name
     @TypeConverter
     fun toSessionStatus(value: String): SessionStatus = SessionStatus.valueOf(value)
+
+    @TypeConverter fun fromExamType(v: ExamType): String = v.name
+    @TypeConverter fun toExamType(v: String): ExamType = ExamType.valueOf(v)
+
+    @TypeConverter fun fromMakeupExamStatus(v: MakeupExamStatus): String = v.name
+    @TypeConverter fun toMakeupExamStatus(v: String): MakeupExamStatus = MakeupExamStatus.valueOf(v)
+
+    @TypeConverter fun fromInteractionType(v: InteractionType): String = v.name
+    @TypeConverter fun toInteractionType(v: String): InteractionType = InteractionType.valueOf(v)
+
+    @TypeConverter fun fromAttendanceStatus(v: AttendanceStatus): String = v.name
+    @TypeConverter fun toAttendanceStatus(v: String): AttendanceStatus = AttendanceStatus.valueOf(v)
 }

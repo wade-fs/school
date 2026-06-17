@@ -267,5 +267,54 @@ fun TeacherAppNavigation() {
         composable("admin/docs/archive") {
             OfficialDocumentScreen(onBack = { navController.popBackStack() })
         }
+
+        // ── 科任教師平台 (Subject Teacher Platform) ─────────────────────────
+        composable("subject/grades/input?classId={classId}", arguments = listOf(
+            navArgument("classId") { nullable = true }
+        )) { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            GradeManagementScreen(classId = classId, onNavigateBack = { navController.popBackStack() })
+        }
+        composable("subject/grades/calc?classId={classId}", arguments = listOf(
+            navArgument("classId") { nullable = true }
+        )) { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            GradeManagementScreen(classId = classId, onNavigateBack = { navController.popBackStack() })
+        }
+        composable("subject/grades/analysis?classId={classId}", arguments = listOf(
+            navArgument("classId") { nullable = true }
+        )) { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            GradeManagementScreen(classId = classId, onNavigateBack = { navController.popBackStack() })
+        }
+        composable("subject/makeup") {
+            MakeupExamScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable("subject/interaction?classId={classId}", arguments = listOf(
+            navArgument("classId") { nullable = true }
+        )) { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            ClassroomInteractionScreen(classId = classId, onNavigateBack = { navController.popBackStack() })
+        }
+        composable("subject/reflection?classId={classId}", arguments = listOf(
+            navArgument("classId") { nullable = true }
+        )) { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            TeachingReflectionScreen(classId = classId, onNavigateBack = { navController.popBackStack() })
+        }
+        composable("subject/attendance?classId={classId}", arguments = listOf(
+            navArgument("classId") { nullable = true }
+        )) { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            AttendanceScreen(classId = classId, onBack = { navController.popBackStack() })
+        }
+        composable("subject/timetable") {
+            // Placeholder: SubjectTeacherDashboard already has a timetable dialog.
+            // For now, just go back or show a simple message.
+            navController.popBackStack()
+        }
+        composable("subject/lesson_plans") {
+            LessonPlanScreen(onBack = { navController.popBackStack() })
+        }
     }
 }

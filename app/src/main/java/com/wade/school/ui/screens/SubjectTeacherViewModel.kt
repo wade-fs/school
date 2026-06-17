@@ -12,6 +12,14 @@ import com.wade.school.data.local.entity.LessonPlan
 import com.wade.school.data.local.entity.Assignment
 import com.wade.school.data.local.entity.Submission
 import com.wade.school.data.local.entity.TimetableEntry
+import com.wade.school.data.local.entity.GradeWeight
+import com.wade.school.data.local.entity.ExamRecord
+import com.wade.school.data.local.entity.ExamScore
+import com.wade.school.data.local.entity.MakeupExam
+import com.wade.school.data.local.entity.ClassroomInteraction
+import com.wade.school.data.local.entity.TeachingReflection
+import com.wade.school.data.local.entity.SubjectAttendance
+import com.wade.school.data.local.entity.StudentScoreSummary
 import com.wade.school.util.CsvParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -303,4 +311,74 @@ class SubjectTeacherViewModel(application: Application) : AndroidViewModel(appli
         val graded = submissions.filter { it.score != null }
         if (graded.isEmpty()) 0.0 else graded.map { it.score!! }.average()
     }
+
+    // --- Phase 2: Grades, Interactions, Reflections ---
+
+    fun getExamsByClass(classId: String) = dao.getExamsByClass(classId)
+
+    fun createExam(record: ExamRecord, studentIds: List<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val examId = dao.insertExamRecord(record).toInt()
+            val initialScores = studentIds.map { id ->
+                ExamScore(examId = examId, studentId = id, score = 0f)
+            }
+            dao.upsertExamScores(initialScores)
+        }
+    }
+
+    fun getScoresByExam(examId: Int) = dao.getScoresByExam(examId)
+
+    fun updateExamScores(scores: List<ExamScore>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.upsertExamScores(scores)
+        }
+    }
+
+    suspend fun getGradeWeight(classId: String, subject: String, sem: Int) = 
+        dao.getGradeWeight(classId, subject, sem)
+
+    fun saveGradeWeight(weight: GradeWeight) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.upsertGradeWeight(weight)
+        }
+    }
+
+    val pendingMakeups = dao.getPendingMakeups()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val pendingMakeupCount = dao.getPendingMakeupCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    fun getMakeupsByClass(classId: String) = dao.getMakeupsByClass(classId)
+
+    fun saveMakeupExam(makeup: MakeupExam) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.upsertMakeupExam(makeup)
+        }
+    }
+
+    fun recordInteraction(interaction: ClassroomInteraction) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertInteraction(interaction)
+        }
+    }
+
+    fun getInteractionSummary(classId: String) = dao.getInteractionScoreSummary(classId)
+
+    fun saveReflection(reflection: TeachingReflection) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertReflection(reflection)
+        }
+    }
+
+    fun getReflectionsByClass(classId: String) = dao.getReflectionsByClass(classId)
+
+    fun saveSubjectAttendance(attendances: List<SubjectAttendance>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.upsertSubjectAttendances(attendances)
+        }
+    }
+
+    fun getSubjectAttendance(classId: String, date: Long, period: Int) = 
+        dao.getSubjectAttendance(classId, date, period)
 }

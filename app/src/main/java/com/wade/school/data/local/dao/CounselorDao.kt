@@ -365,4 +365,82 @@ interface CounselorDao {
 
     @Query("SELECT * FROM referral_records WHERE studentId = :studentId ORDER BY referredAt DESC")
     fun getReferralsForStudent(studentId: String): Flow<List<ReferralRecord>>
+
+    // ── 成績權重 ──────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertGradeWeight(w: GradeWeight)
+
+    @Query("SELECT * FROM grade_weights WHERE classId = :classId AND subjectName = :subject AND semester = :sem")
+    suspend fun getGradeWeight(classId: String, subject: String, sem: Int): GradeWeight?
+
+    // ── 考試記錄 ──────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertExamRecord(r: ExamRecord): Long
+
+    @Query("SELECT * FROM exam_records WHERE classId = :classId ORDER BY examDate DESC")
+    fun getExamsByClass(classId: String): Flow<List<ExamRecord>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertExamScore(s: ExamScore)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertExamScores(list: List<ExamScore>)
+
+    @Query("SELECT * FROM exam_scores WHERE examId = :examId ORDER BY studentName")
+    fun getScoresByExam(examId: Int): Flow<List<ExamScore>>
+
+    @Query("SELECT * FROM exam_scores WHERE studentId = :studentId")
+    fun getScoresByStudent(studentId: String): Flow<List<ExamScore>>
+
+    @Query("SELECT AVG(score) FROM exam_scores WHERE examId = :examId AND isAbsent = 0")
+    fun getExamAverage(examId: Int): Flow<Double?>
+
+    // ── 補考管理 ──────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertMakeupExam(m: MakeupExam)
+
+    @Query("SELECT * FROM makeup_exams WHERE status = 'PENDING' ORDER BY createdAt DESC")
+    fun getPendingMakeups(): Flow<List<MakeupExam>>
+
+    @Query("SELECT * FROM makeup_exams WHERE classId = :classId ORDER BY createdAt DESC")
+    fun getMakeupsByClass(classId: String): Flow<List<MakeupExam>>
+
+    @Query("SELECT COUNT(*) FROM makeup_exams WHERE status = 'PENDING'")
+    fun getPendingMakeupCount(): Flow<Int>
+
+    // ── 課堂互動 ──────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertInteraction(i: ClassroomInteraction)
+
+    @Query("""SELECT * FROM classroom_interactions
+        WHERE classId = :classId AND subjectName = :subject
+        ORDER BY recordedAt DESC""")
+    fun getInteractionsByClass(classId: String, subject: String): Flow<List<ClassroomInteraction>>
+
+    @Query("""SELECT studentId, SUM(score) as totalScore
+        FROM classroom_interactions
+        WHERE classId = :classId
+        GROUP BY studentId ORDER BY totalScore DESC""")
+    fun getInteractionScoreSummary(classId: String): Flow<List<StudentScoreSummary>>
+
+    // ── 教學省思 ──────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertReflection(r: TeachingReflection): Long
+
+    @Query("SELECT * FROM teaching_reflections WHERE classId = :classId ORDER BY teachingDate DESC")
+    fun getReflectionsByClass(classId: String): Flow<List<TeachingReflection>>
+
+    @Query("SELECT * FROM teaching_reflections ORDER BY teachingDate DESC")
+    fun getAllReflections(): Flow<List<TeachingReflection>>
+
+    // ── 科任出缺席 ────────────────────────────────────────────
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSubjectAttendance(a: SubjectAttendance)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSubjectAttendances(list: List<SubjectAttendance>)
+
+    @Query("""SELECT * FROM subject_attendance
+        WHERE classId = :classId AND date = :date AND period = :period""")
+    fun getSubjectAttendance(classId: String, date: Long, period: Int): Flow<List<SubjectAttendance>>
 }

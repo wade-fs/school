@@ -32,7 +32,8 @@ fun SubjectTeacherDashboard(
     onNavigateToAssignments: (String) -> Unit = {},
     onNavigateToAnalysis: (String) -> Unit = {},
     onNavigateToScan: () -> Unit = {},
-    onNavigateToManual: () -> Unit = {}
+    onNavigateToManual: () -> Unit = {},
+    onNavigate: (String) -> Unit = {}
 ) {
     android.util.Log.d("SubjectTeacherDashboard", "Composing SubjectTeacherDashboard")
     val context = LocalContext.current
@@ -206,37 +207,30 @@ fun SubjectTeacherDashboard(
             }
         }
 
-        item {
-            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                DashboardActionCard("教案模板庫", "對接 108 課綱核心素養", "開啟", onNavigateToLessonPlans)
+        // --- Dynamic Features from FeatureData ---
+        val featureGroups = com.wade.school.ui.data.FeatureData.getFeaturesForRole("subject")
+        featureGroups.forEach { group ->
+            item {
+                Text(
+                    text = group.groupTitle,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
             }
-        }
-
-        item {
-            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                DashboardActionCard("課堂表現快速標記", "即時記錄學生發言、分組表現", "進入記錄", { activeDisplayClassId?.let { onNavigateToTagging(it) } })
-            }
-        }
-        
-        item {
-            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                DashboardActionCard("作業派發", "管理作業截止日期與批改進度", "管理", { activeDisplayClassId?.let { onNavigateToAssignments(it) } })
-            }
-        }
-
-        item {
-            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                DashboardActionCard("學習成效分析", "班級成績分佈與個別學習曲線", "查看分析", { activeDisplayClassId?.let { onNavigateToAnalysis(it) } })
-            }
-        }
-        item {
-            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                DashboardActionCard("文件掃描", "拍照上傳紙本公文", "開始", onNavigateToScan)
-            }
-        }
-        item {
-            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                DashboardActionCard("使用手冊", "查看 App 操作說明", "查看", onNavigateToManual)
+            items(group.items) { feature ->
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    FeatureRow(feature) { route ->
+                        val finalRoute = if (route.contains("?")) {
+                            "$route&classId=${activeDisplayClassId ?: ""}"
+                        } else if (route.startsWith("subject/grades") || route == "subject/interaction" || route == "subject/reflection" || route == "subject/attendance") {
+                            "$route?classId=${activeDisplayClassId ?: ""}"
+                        } else {
+                            route
+                        }
+                        onNavigate(finalRoute)
+                    }
+                }
             }
         }
 

@@ -47,9 +47,17 @@ import com.wade.school.data.local.entity.*
         AssessmentQuestion::class,
         AssessmentSession::class,
         AssessmentResponse::class,
-        ReferralRecord::class
+        ReferralRecord::class,
+        GradeWeight::class,
+        ExamRecord::class,
+        ExamScore::class,
+        MakeupExam::class,
+        ClassroomInteraction::class,
+        TeachingReflection::class,
+        CompetencyMapping::class,
+        SubjectAttendance::class
         ],
-        version = 15,                        // bumped from 14
+        version = 16,                        // bumped from 15
         exportSchema = false
         )
 @TypeConverters(Converters::class)

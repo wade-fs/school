@@ -137,7 +137,8 @@ fun DashboardScreen(
                             onNavigateToAssignments = onNavigateToAssignments,
                             onNavigateToAnalysis = onNavigateToAnalysis,
                             onNavigateToScan = { onNavigate("school_info/scan") },
-                            onNavigateToManual = { onNavigate("manual") }
+                            onNavigateToManual = { onNavigate("manual") },
+                            onNavigate = onNavigate
                         )
                         "homeroom" -> HomeroomDashboard(
                             onNavigateToStudent = onNavigateToStudent,
