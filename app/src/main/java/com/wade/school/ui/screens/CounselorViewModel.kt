@@ -551,20 +551,41 @@ class CounselorViewModel(application: Application) : AndroidViewModel(applicatio
             _activeSessionId.value = sessionId.toInt()
         }
     }
-
-    fun saveMoodCheckResponse(sessionId: Long, studentId: String, score: Int, note: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            dao.insertMoodCheckResponse(MoodCheckResponse(sessionId = sessionId.toInt(), studentId = studentId, score = score, note = note))
-
-            // 高風險檢測：分數 <= 3 觸發 URGENT 警示
-            if (score <= 3) {
+    fun saveMoodCheckResponse(
+        sessionId: Long, 
+        studentId: String, 
+        selectedEmotion: String?,
+        emotionQuadrant: String?,
+        bsrsScores: List<Int>?,
+        note: String
+    ) {
+        viewModelScope.launch {
+            val totalScore = bsrsScores?.sum() ?: 0
+            dao.insertMoodCheckResponse(
+                MoodCheckResponse(
+                    sessionId = sessionId.toInt(), 
+                    studentId = studentId, 
+                    selectedEmotion = selectedEmotion,
+                    emotionQuadrant = emotionQuadrant,
+                    bsrsSleep = bsrsScores?.getOrNull(0),
+                    bsrsTense = bsrsScores?.getOrNull(1),
+                    bsrsAnger = bsrsScores?.getOrNull(2),
+                    bsrsDepression = bsrsScores?.getOrNull(3),
+                    bsrsInferiority = bsrsScores?.getOrNull(4),
+                    bsrsSuicide = bsrsScores?.getOrNull(5),
+                    score = totalScore, 
+                    note = note
+                )
+            )
+            // 高風險檢測：分數 >= 10 (中度情緒困擾以上) 或 有自殺想法 (bsrsSuicide >= 2) 觸發 URGENT 警示
+            if (totalScore >= 10 || (bsrsScores?.getOrNull(5) ?: 0) >= 2) {
                 dao.insertAlert(
                     RiskAlert(
                         studentId = studentId,
                         sourceType = "ASSESSMENT",
                         sourceId = sessionId.toString(),
                         severity = AlertSeverity.URGENT,
-                        reason = "心情溫度計低分警示 (分數: $score)"
+                        reason = "心情溫度計高風險警示 (BSRS總分: $totalScore)"
                     )
                 )
             }
