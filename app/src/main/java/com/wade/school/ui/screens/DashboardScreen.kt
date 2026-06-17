@@ -127,6 +127,8 @@ fun DashboardScreen(
                             onNavigateToResources = onNavigateToResources,
                             onNavigateToScan = { onNavigate("school_info/scan") },
                             onNavigateToManual = { onNavigate("manual") },
+                            onNavigateToTemplates = { onNavigate("counseling/templates") },
+                            onNavigateToSessionsHistory = { onNavigate("counseling/sessions/history") },
                             viewModel = viewModel
                         )
                         "subject" -> SubjectTeacherDashboard(
@@ -335,6 +337,8 @@ fun CounselingDashboard(
     onNavigateToResources: () -> Unit,
     onNavigateToScan: () -> Unit,
     onNavigateToManual: () -> Unit,
+    onNavigateToTemplates: () -> Unit,
+    onNavigateToSessionsHistory: () -> Unit,
     viewModel: CounselorViewModel
 ) {
     val context = LocalContext.current
@@ -374,7 +378,15 @@ fun CounselingDashboard(
             Spacer(modifier = Modifier.height(16.dp))
         }
         item {
+            Text("評量與測驗", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            DashboardActionCard("心情溫度計", "情緒四象限與 BSRS-5", "施測", onNavigateToMoodCheck)
+            DashboardActionCard("測驗模板庫", "選用或建立量表模板 (包含 PHQ-9, 職涯)", "管理", onNavigateToTemplates)
+            DashboardActionCard("歷史結果", "查閱各場次施測報告", "查看", onNavigateToSessionsHistory)
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        item {
             Text("常用工具", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            DashboardActionCard("外部資源", "社福機構與轉介資源", "查看", onNavigateToResources)
             DashboardActionCard("文件掃描", "拍照上傳紙本公文", "開始", onNavigateToScan)
             DashboardActionCard("使用手冊", "查看 App 操作說明", "查看", onNavigateToManual)
             Spacer(modifier = Modifier.height(16.dp))
