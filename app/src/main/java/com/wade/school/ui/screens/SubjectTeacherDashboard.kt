@@ -221,9 +221,11 @@ fun SubjectTeacherDashboard(
             items(group.items) { feature ->
                 Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                     FeatureRow(feature) { route ->
-                        val finalRoute = if (route.contains("?")) {
+                        val finalRoute = if (route == "subject/attendance") {
+                            "$route?classId=${activeDisplayClassId ?: ""}&period=${currentLesson?.period ?: 1}"
+                        } else if (route.contains("?")) {
                             "$route&classId=${activeDisplayClassId ?: ""}"
-                        } else if (route.startsWith("subject/grades") || route == "subject/interaction" || route == "subject/reflection" || route == "subject/attendance") {
+                        } else if (route.startsWith("subject/grades") || route == "subject/interaction" || route == "subject/reflection") {
                             "$route?classId=${activeDisplayClassId ?: ""}"
                         } else {
                             route

@@ -139,6 +139,9 @@ fun SubmissionListScreen(
 
     // Mime types for CSV
     val csvMimeTypes = arrayOf("text/csv", "text/comma-separated-values", "application/csv", "*/*")
+    
+    var selectedFilter by remember { mutableStateOf("全部") }
+    val filters = listOf("全部", "待繳", "已繳", "已批改", "遲交")
 
     Scaffold(
         topBar = {
@@ -170,26 +173,64 @@ fun SubmissionListScreen(
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                     val submitted = submissions.count { it.status != "待繳" }
                     val total = submissions.size
+                    val overdue = submissions.count { it.status == "待繳" && (assignment.dueDate < System.currentTimeMillis()) }
+                    
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(text = "$submitted / $total", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                        Text(text = "繳交人數", style = MaterialTheme.typography.labelSmall)
+                        Text(text = "已繳人數", style = MaterialTheme.typography.labelSmall)
+                    }
+                    if (overdue > 0) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(text = "$overdue", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                            Text(text = "逾期未繳", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
+                
+                if (submissions.any { it.status == "待繳" && (assignment.dueDate < System.currentTimeMillis()) }) {
+                    Button(
+                        onClick = { /* Prepare notification to Homeroom Teacher */ },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Icon(Icons.Default.Notifications, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("通知導師未繳名單")
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                    filters.forEach { filter ->
+                        FilterChip(
+                            selected = selectedFilter == filter,
+                            onClick = { selectedFilter = filter },
+                            label = { Text(filter) },
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
                 HorizontalDivider()
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
-            items(submissions) { submission ->
+            val filteredSubmissions = if (selectedFilter == "全部") submissions else submissions.filter { it.status == selectedFilter }
+
+            items(filteredSubmissions) { submission ->
+                val isOverdue = submission.status == "待繳" && (assignment.dueDate < System.currentTimeMillis())
                 ListItem(
                     headlineContent = { Text(submission.studentName) },
                     supportingContent = { Text("學號: ${submission.studentId}") },
                     trailingContent = {
                         Text(
-                            text = submission.status,
-                            color = when(submission.status) {
-                                "已批改" -> Color(0xFF43A047)
-                                "已繳" -> MaterialTheme.colorScheme.primary
-                                else -> MaterialTheme.colorScheme.error
+                            text = if (isOverdue) "逾期" else submission.status,
+                            color = when {
+                                isOverdue -> MaterialTheme.colorScheme.error
+                                submission.status == "已批改" -> Color(0xFF43A047)
+                                submission.status == "已繳" -> MaterialTheme.colorScheme.primary
+                                submission.status == "遲交" -> Color(0xFFE65100)
+                                else -> MaterialTheme.colorScheme.outline
                             },
                             fontWeight = FontWeight.Bold
                         )

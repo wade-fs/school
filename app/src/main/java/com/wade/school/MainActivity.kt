@@ -302,11 +302,13 @@ fun TeacherAppNavigation() {
             val classId = backStackEntry.arguments?.getString("classId") ?: ""
             TeachingReflectionScreen(classId = classId, onNavigateBack = { navController.popBackStack() })
         }
-        composable("subject/attendance?classId={classId}", arguments = listOf(
-            navArgument("classId") { nullable = true }
+        composable("subject/attendance?classId={classId}&period={period}", arguments = listOf(
+            navArgument("classId") { nullable = true },
+            navArgument("period") { type = NavType.IntType; defaultValue = 1 }
         )) { backStackEntry ->
             val classId = backStackEntry.arguments?.getString("classId") ?: ""
-            AttendanceScreen(classId = classId, onBack = { navController.popBackStack() })
+            val period = backStackEntry.arguments?.getInt("period") ?: 1
+            SubjectAttendanceScreen(classId = classId, period = period, onBack = { navController.popBackStack() })
         }
         composable("subject/timetable") {
             // Placeholder: SubjectTeacherDashboard already has a timetable dialog.

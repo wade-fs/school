@@ -20,8 +20,9 @@ data class Submission(
     val assignmentId: Int,
     val studentId: String,
     val studentName: String,
-    val status: String = "待繳",   // 待繳 / 已繳 / 已批改
+    val status: String = "待繳",   // 待繳 / 已繳 / 已批改 / 遲交 / 免繳 / 需重做
     val score: Int? = null,
     val feedback: String? = null,
+    val note: String? = null,
     val submittedAt: Long? = null
 )
