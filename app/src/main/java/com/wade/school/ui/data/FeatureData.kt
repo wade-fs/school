@@ -31,7 +31,8 @@ object FeatureData {
     private val homeroomFeatures = listOf(
         FeatureGroup("班級總覽", listOf(
             FeatureItem("班級儀表板",   "今日出缺席、待辦摘要",       "dashboard",      null,        BadgeType.NONE,    "homeroom/dashboard"),
-            FeatureItem("學生名冊",     "健康資訊、緊急聯絡人、快查",  "contact_page",   null,        BadgeType.NONE,    "homeroom/students"),
+            FeatureItem("學生名冊",     "緊急聯絡人與基本學籍",        "contact_page",   null,        BadgeType.NONE,    "homeroom/students"),
+            FeatureItem("健康安全",     "血型、過敏、慢性病與 IEP",    "health_and_safety", null,      BadgeType.NONE,    "homeroom/health"),
             FeatureItem("座位表",       "拖曳更換座位",                "grid_view",      null,        BadgeType.NONE,    "homeroom/seating")
         )),
         FeatureGroup("出缺席管理", listOf(
@@ -42,8 +43,7 @@ object FeatureData {
         )),
         FeatureGroup("獎懲與操行", listOf(
             FeatureItem("獎懲記錄",     "新增功過、查閱全班獎懲",       "gavel",          null,        BadgeType.NONE,    "homeroom/discipline"),
-            FeatureItem("操行成績",     "學期操行計算與評語填寫",        "rate_review",    "未完成 5 人", BadgeType.INFO,  "homeroom/semester"),
-            FeatureItem("學期評語",     "AI 輔助填寫評語，進度追蹤",    "edit_note",      "未填 12 人", BadgeType.WARNING,"homeroom/semester/comments")
+            FeatureItem("學期結算",     "操行計分、評語填寫與結案",     "summarize",      "未完成 5 人", BadgeType.INFO,  "homeroom/semester")
         )),
         FeatureGroup("親師溝通", listOf(
             FeatureItem("數位聯絡簿",   "填寫作業與注意事項",           "book",           "8 人未簽",  BadgeType.INFO,    "homeroom/contact_book"),

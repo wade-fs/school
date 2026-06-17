@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
@@ -17,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -516,6 +518,8 @@ fun HomeroomDashboard(
     val classId = schoolConfig.homeroomClass
     val students by viewModel.homeroomStudents.collectAsState()
     val isImporting by viewModel.isImporting.collectAsState()
+    val pendingLeaveCount by viewModel.getPendingLeaveCount(classId).collectAsState(initial = 0)
+    
     val context = LocalContext.current
 
     val studentPicker = rememberLauncherForActivityResult(
@@ -530,16 +534,42 @@ fun HomeroomDashboard(
     ) {
         item {
             SchoolInfoCard(config = schoolConfig)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("常用工具", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            DashboardActionCard("文件掃描", "拍照上傳紙本公文", "開始", onNavigateToScan)
-            DashboardActionCard("使用手冊", "查看 App 操作說明", "查看", onNavigateToManual)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // --- Today's Summary Card (New) ---
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("今日班級概況", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        SummaryStatItem("出席", "${students.size}", "人")
+                        SummaryStatItem("缺席", "0", "人") // Placeholder
+                        SummaryStatItem("待審假單", "$pendingLeaveCount", "件", color = if(pendingLeaveCount > 0) MaterialTheme.colorScheme.error else null)
+                    }
+                }
+            }
+        }
+
+        // --- Quick Actions Bar (New) ---
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                QuickActionButton(Icons.Default.HowToReg, "今日點名", Modifier.weight(1f)) { onNavigateToAttendance(classId) }
+                QuickActionButton(Icons.Default.PendingActions, "審核假單", Modifier.weight(1f)) { onNavigate("homeroom/leave?classId=$classId") }
+                QuickActionButton(Icons.Default.Campaign, "班級廣播", Modifier.weight(1f)) { /* TODO */ }
+            }
         }
 
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${classId} 班級導師工作台", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Text("${classId} 班級管理助手", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 IconButton(onClick = onEditClass) {
                     Icon(Icons.Default.Edit, contentDescription = "更換班級", modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
                 }
@@ -552,42 +582,23 @@ fun HomeroomDashboard(
                 }) {
                     Icon(Icons.Default.GroupAdd, contentDescription = "匯入班級學生")
                 }
-                IconButton(onClick = { viewModel.clearStudentsForClass(classId) }) {
-                    Icon(Icons.Default.Delete, contentDescription = "清空班級學生", tint = MaterialTheme.colorScheme.error)
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = { onNavigateToAttendance(classId) },
-                    modifier = Modifier.weight(1f)
-                ) { Text("今日點名") }
-                
-                OutlinedButton(
-                    onClick = { onNavigateToAttendanceHistory(classId) },
-                    modifier = Modifier.weight(1f)
-                ) { Text("出缺席紀錄") }
             }
             
             Spacer(modifier = Modifier.height(8.dp))
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
-                    onClick = onNavigateToMoodCheck,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-                ) { Text("心情檢核") }
-                
-                Button(
                     onClick = { onNavigate("homeroom/dashboard?classId=$classId") },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                ) { Text("班級管理助手") }
+                ) { 
+                    Icon(Icons.Default.DashboardCustomize, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("進階管理工具 (獎懲/班費/座談)") 
+                }
             }
             
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
         
         item {
@@ -612,6 +623,32 @@ fun HomeroomDashboard(
         
         item {
             Spacer(modifier = Modifier.height(80.dp))
+        }
+    }
+}
+
+@Composable
+fun QuickActionButton(icon: ImageVector, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(64.dp),
+        contentPadding = PaddingValues(4.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+            Text(label, fontSize = 11.sp)
+        }
+    }
+}
+
+@Composable
+fun SummaryStatItem(label: String, value: String, unit: String, color: Color? = null) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, style = MaterialTheme.typography.labelSmall)
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = color ?: Color.Unspecified)
+            Text(unit, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(bottom = 4.dp))
         }
     }
 }

@@ -355,5 +355,17 @@ fun TeacherAppNavigation() {
             val classId = backStackEntry.arguments?.getString("classId") ?: ""
             ParentConferenceScreen(classId = classId, onBack = { navController.popBackStack() })
         }
+        composable("homeroom/health?classId={classId}", arguments = listOf(
+            navArgument("classId") { nullable = true }
+        )) { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            StudentHealthScreen(classId = classId, onBack = { navController.popBackStack() })
+        }
+        composable("homeroom/semester?classId={classId}", arguments = listOf(
+            navArgument("classId") { nullable = true }
+        )) { backStackEntry ->
+            val classId = backStackEntry.arguments?.getString("classId") ?: ""
+            SemesterRecordScreen(classId = classId, onBack = { navController.popBackStack() })
+        }
     }
 }

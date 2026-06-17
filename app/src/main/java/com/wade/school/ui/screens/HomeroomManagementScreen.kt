@@ -95,6 +95,8 @@ fun FeatureCard(feature: com.wade.school.ui.data.FeatureItem, modifier: Modifier
                 imageVector = when(feature.iconName) {
                     "dashboard" -> Icons.Default.Dashboard
                     "contact_page" -> Icons.Default.ContactPage
+                    "health_and_safety" -> Icons.Default.HealthAndSafety
+                    "summarize" -> Icons.Default.Summarize
                     "grid_view" -> Icons.Default.GridView
                     "how_to_reg" -> Icons.Default.HowToReg
                     "pending_actions" -> Icons.Default.PendingActions

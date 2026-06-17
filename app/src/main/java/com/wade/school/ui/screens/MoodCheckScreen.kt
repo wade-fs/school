@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalLayoutApi::class)
 package com.wade.school.ui.screens
 
 import androidx.compose.foundation.background
@@ -270,7 +271,6 @@ fun EmotionQuadrantSelector(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun QuadrantBox(modifier: Modifier, title: String, color: Color, emotions: List<String>, selectedEmotion: String?, onSelect: (String) -> Unit) {
     Column(
