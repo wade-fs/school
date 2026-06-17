@@ -282,19 +282,45 @@ fun AddLessonPlanDialog(onDismiss: () -> Unit, onSave: (LessonPlan) -> Unit) {
     var grade by remember { mutableStateOf("10") }
     var competencies by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
+    
+    val commonCompetencies = listOf(
+        "A1" to "身心素質", "A2" to "系統思考", "A3" to "規劃執行",
+        "B1" to "符號運用", "B2" to "科技資訊", "B3" to "藝術涵養",
+        "C1" to "道德實踐", "C2" to "人際關係", "C3" to "多元文化"
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("新增 108 教案") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = topic, onValueChange = { topic = it }, label = { Text("主題/單元") }, modifier = Modifier.fillMaxWidth())
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = subject, onValueChange = { subject = it }, label = { Text("科目") }, modifier = Modifier.weight(1f))
-                    OutlinedTextField(value = grade, onValueChange = { grade = it }, label = { Text("年級") }, modifier = Modifier.weight(1f))
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.heightIn(max = 400.dp)) {
+                item {
+                    OutlinedTextField(value = topic, onValueChange = { topic = it }, label = { Text("主題/單元") }, modifier = Modifier.fillMaxWidth())
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = subject, onValueChange = { subject = it }, label = { Text("科目") }, modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = grade, onValueChange = { grade = it }, label = { Text("年級") }, modifier = Modifier.weight(1f))
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("核心素養項目", style = MaterialTheme.typography.labelSmall)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        commonCompetencies.forEach { (code, label) ->
+                            val isSelected = competencies.contains(code)
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    competencies = if (isSelected) {
+                                        competencies.split(",").filter { it != code }.joinToString(",")
+                                    } else {
+                                        if (competencies.isBlank()) code else "$competencies,$code"
+                                    }
+                                },
+                                label = { Text(code, fontSize = 10.sp) }
+                            )
+                        }
+                    }
+                    OutlinedTextField(value = competencies, onValueChange = { competencies = it }, label = { Text("自訂素養 (以逗號分隔)") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("教學簡述") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
                 }
-                OutlinedTextField(value = competencies, onValueChange = { competencies = it }, label = { Text("核心素養 (以逗號分隔)") }, placeholder = { Text("例如：系統思考, 溝通互動") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("教學簡述") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
             }
         },
         confirmButton = {

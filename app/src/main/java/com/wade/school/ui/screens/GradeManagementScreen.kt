@@ -323,8 +323,29 @@ fun GradeAnalysisTab(classId: String, viewModel: SubjectTeacherViewModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
         Text("低標警示學生", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
-        // Placeholder for list
-        Text("張小明 (42), 李小華 (55)", style = MaterialTheme.typography.bodySmall)
+        
+        val atRiskStudents = listOf("張小明 (42)", "李小華 (55)") // In real app, calculate from scores
+        
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(atRiskStudents.joinToString(", "), style = MaterialTheme.typography.bodySmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        // In real app, trigger viewModel.sendRiskAlerts(atRiskStudents)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Icon(Icons.Default.Warning, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("推送到輔導室警示")
+                }
+            }
+        }
     }
 }
 

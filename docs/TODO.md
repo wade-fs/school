@@ -2,27 +2,24 @@
 
 > 專案：中學教師助手 App（`com.wade.school`）
 > 更新日期：2026-06-17
-> 狀態：規劃中，Entity 已建立，Screen 待實作
-> 基礎版本：school3.zip（DB version 15）
+> 狀態：已完成 (Phase 1-3 實作完畢)
+> 基礎版本：school3.zip（DB version 16）
 
 ---
 
 ## 一、現況盤點
 
-### 已有的基礎（school3）
+### 已完成的功能 (2026-06-17)
 
 | 檔案 | 內容 | 完整度 |
 |------|------|--------|
-| `SubjectTeacherViewModel.kt` | 課表、教案、作業、成績匯入 | ★★★☆☆ |
-| `LessonPlanScreen.kt` | 108 課綱教案庫 CRUD | ★★★☆☆ |
-| `AssignmentManagementScreen.kt` | 作業管理 + 繳交追蹤 | ★★★☆☆ |
-| `GradeAnalysisScreen.kt` | 班級成績統計圖 | ★★☆☆☆ |
-| `ClassroomTaggingScreen.kt` | 課堂表現標記 | ★★☆☆☆ |
-| `AttendanceScreen.kt` | 出缺席點名 | ★★☆☆☆ |
-| `Assignment.kt` | 作業 entity | 骨架 |
-| `Submission.kt` | 繳交/成績 entity | 骨架 |
-| `LessonPlan.kt` | 教案 entity | 骨架 |
-| `ClassroomPerformance.kt` | 課堂表現 entity | 骨架 |
+| `SubjectTeacherEntities.kt` | 所有新 Entity (GradeWeight, Exam, Makeup, Interaction, etc.) | ★★★★★ |
+| `GradeManagementScreen.kt` | 成績輸入、權重設定、分析、輔導推播 | ★★★★★ |
+| `MakeupExamScreen.kt` | 補考排程與成績管理 | ★★★★★ |
+| `ClassroomInteractionScreen.kt` | 隨機抽人、排行榜、計時器 | ★★★★★ |
+| `SubjectAttendanceScreen.kt` | 科任專屬時段點名 | ★★★★★ |
+| `TeachingReflectionScreen.kt` | 四格省思日誌 | ★★★★★ |
+| `LessonPlanScreen.kt` | 108 課綱素養勾選與教案管理 | ★★★★★ |
 
 ### `subjectFeatures`（FeatureData.kt 現況）
 
