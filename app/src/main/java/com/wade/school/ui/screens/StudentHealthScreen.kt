@@ -132,7 +132,7 @@ fun EditHealthDialog(student: Student, viewModel: CounselorViewModel, onDismiss:
                     OutlinedTextField(value = allergies, onValueChange = { allergies = it }, label = { Text("過敏原") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = chronicDisease, onValueChange = { chronicDisease = it }, label = { Text("慢性病紀錄") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = medication, onValueChange = { medication = it }, label = { Text("長期用藥") }, modifier = Modifier.fillMaxWidth())
-                    Divider(Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
                     Text("緊急聯絡人資訊", style = MaterialTheme.typography.labelLarge)
                     OutlinedTextField(value = contact1, onValueChange = { contact1 = it }, label = { Text("聯絡人姓名") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(value = phone1, onValueChange = { phone1 = it }, label = { Text("聯絡電話") }, modifier = Modifier.fillMaxWidth())
